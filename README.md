@@ -40,7 +40,11 @@ agent-setup/
 
 ## Installation
 
-Clone the repo and run the installer:
+```bash
+curl -fsSL https://raw.githubusercontent.com/nguyenhoangminh1106/agent-setup/main/install.sh | bash
+```
+
+Or clone and run locally:
 
 ```bash
 git clone https://github.com/nguyenhoangminh1106/agent-setup.git
