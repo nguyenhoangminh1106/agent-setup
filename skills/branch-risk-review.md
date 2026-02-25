@@ -21,10 +21,18 @@ STRICT READ-ONLY MODE:
 
 ## Security and safety: keep it proportional
 
-- Minor security concerns (theoretical XSS on an internal tool, a missing null check that can't realistically trigger) → NOTE as non-blocking, do NOT flag as a risk.
-- Only flag security issues if they are concrete, exploitable, and worth the cost of fixing.
+- Only flag security issues if they are concrete, exploitable in a realistic real-world scenario, and worth the cost of fixing.
+- Ask: "Can this actually happen in practice, given how this code is used?" If no → skip it.
+- Minor concerns (theoretical XSS on an internal tool, a null check that can't realistically trigger) → at most a non-blocking note.
 - Never suggest adding complexity, extra validation layers, or defensive code for hypothetical edge cases.
 - Do NOT penalize simple, readable code in favor of "safer" but more complex code.
+
+## Business context: understand intent before flagging
+
+- Before flagging something as a risk, consider whether it might be intentional by design.
+- If a feature behaves in a way that makes sense for a business reason (e.g. skipping a check for performance, allowing an action that seems unsafe but is gated upstream), do NOT flag it as a risk just because you don't have full context.
+- When unsure whether something is a bug or intentional: ask or note the uncertainty — do NOT assume it's wrong.
+- Flagging intentional behavior as a risk wastes review time and erodes trust in the review.
 
 ## What is UNACCEPTABLE
 
@@ -107,8 +115,10 @@ For each changed file:
 - Diff size: Minimal / Reasonable / Larger than needed
 
 C) Risk highlights (REAL risks only)
-- Only list concrete scenarios where existing behavior could break
-- Skip theoretical or low-probability concerns
+- Only list concrete scenarios where existing behavior could break in practice
+- For each risk, explicitly state: what triggers it, how likely it is in real use, and what the actual impact is
+- Skip theoretical, low-probability, or "could happen if someone does X wrong" concerns
+- If something looks risky but might be intentional, note the uncertainty instead of flagging it as a defect
 
 D) Simplicity and complexity notes
 - Flag over-engineered code, unnecessary abstractions, or added complexity that isn't justified
