@@ -1,12 +1,13 @@
 # agent-setup
 
-A **single-source-of-truth** repository for AI agent skills shared across:
+A single-source-of-truth set of reusable skills for **Claude Code**, **Codex**, and **Cursor**.
 
-* Claude Code
-* Codex CLI
-* Cursor
+---
 
-No duplication. No copy–paste. One skill = one file.
+## One-line install (no clone)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/nguyenhoangminh1106/agent-setup/main/install.sh | bash
 
 ---
 
@@ -53,24 +54,6 @@ Used by **Codex + Cursor**
 * Enforces consistency with current code style
 * Prefers containment and minimal change
 * Report-only
-
----
-
-## Install (any machine)
-
-```bash
-git clone https://github.com/nguyenhoangminh1106/agent-setup.git
-cd agent-setup
-./install.sh
-```
-
----
-
-### One-line install (no clone)
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/nguyenhoangminh1106/agent-setup/main/install-remote.sh | bash
-```
 
 ---
 
