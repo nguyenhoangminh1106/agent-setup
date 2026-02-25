@@ -66,6 +66,12 @@ cd agent-setup
 
 ---
 
+### One-line install (no clone)
+
+curl -fsSL https://raw.githubusercontent.com/nguyenhoangminh1106/agent-setup/main/install-remote.sh | bash
+
+---
+
 ## Usage
 
 ### Claude Code
