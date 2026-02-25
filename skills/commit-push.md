@@ -6,12 +6,10 @@ Rules:
 - If no changes: say so and stop.
 - If pre-commit (husky) fails with ERRORS: fix only the errors with minimal diff. Ignore warnings.
 - Never bypass hooks (no --no-verify).
-- Always sync current branch with remote and main BEFORE pushing.
 
 Steps:
 
 0) Preconditions:
-   - Ensure gh is authenticated: gh auth status
    - Determine current branch:
      git branch --show-current
    - If detached HEAD: stop and explain.
@@ -19,38 +17,29 @@ Steps:
 1) Fetch latest:
    git fetch --prune origin
 
-2) Sync with remote branch (if exists):
-   - If origin/<branch> exists:
-     git rebase origin/<branch>
+2) Merge main into current branch (if not on main and origin/main exists):
+   git merge origin/main
 
-3) Sync with main (if not on main and origin/main exists):
-   git rebase origin/main
-
-4) Check changes:
+3) Check changes:
    git status --porcelain
    - If empty: say "No changes to commit."
 
-5) Inspect:
+4) Inspect:
    git diff
 
-6) Decide commit message (Conventional Commits).
+5) Decide commit message (Conventional Commits).
 
-7) Stage all:
+6) Stage all:
    git add -A
 
-8) Commit:
+7) Commit:
    git -c commit.template= commit -m "<message>"
    - On Husky ERROR: fix minimal, retry.
 
-9) Ensure HTTPS remote:
-   git remote -v
-   git remote set-url origin https://github.com/paraform-xyz/paraform.git
-
-10) Push:
+8) Push:
    git push -u origin HEAD
 
-11) PR URL:
+9) PR URL:
    - If exists:
      gh pr view --json url --jq .url
-   - Else:
-     https://github.com/paraform-xyz/paraform/compare/<branch>?expand=1
+   - Else: print the compare URL from git remote -v
