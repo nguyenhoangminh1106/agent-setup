@@ -22,13 +22,16 @@ SKILLS=(
   "worktree-remove"
 )
 
-# Download
+# Download then install each skill
 for s in "${SKILLS[@]}"; do
   curl -fsSL "$REPO_RAW/skills/${s}.md" -o "$TMP_DIR/${s}.md"
-done
-
-# Copy to each tool
-for s in "${SKILLS[@]}"; do
+  if [[ ! -s "$TMP_DIR/${s}.md" ]]; then
+    echo "ERROR: failed to download skills/${s}.md" >&2
+    exit 1
+  fi
+  rm -f "$HOME/.claude/commands/${s}.md"
+  rm -f "$HOME/.codex/prompts/${s}.md"
+  rm -f "$HOME/.cursor/commands/${s}.md"
   cp "$TMP_DIR/${s}.md" "$HOME/.claude/commands/${s}.md"
   cp "$TMP_DIR/${s}.md" "$HOME/.codex/prompts/${s}.md"
   cp "$TMP_DIR/${s}.md" "$HOME/.cursor/commands/${s}.md"
