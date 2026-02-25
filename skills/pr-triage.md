@@ -9,7 +9,7 @@ arguments:
 STRICT MODE:
 - DO NOT edit, write, or modify any code files.
 - DO NOT checkout branches, commit, or run tools that change repo state.
-- You MAY reply+resolve ONLY for BOT threads when verdict is STYLE or FALSE-ALARM.
+- You MAY reply+resolve ONLY for BOT threads when verdict is STYLE, FALSE-ALARM, or NONCRITICAL with ~Low / ~Very Low likelihood.
 - For HUMAN feedback: NEVER reply, NEVER resolve (report only).
 
 Definitions:
@@ -74,11 +74,16 @@ Data collection (use gh; prefer GraphQL):
    }' -f owner=... -f name=... -F number=...
 
 Decision rules:
-- CRITICAL (any author):
+- CRITICAL with ~High or ~Medium likelihood (any author):
   - Report + add to minimal fix plan
   - Do NOT reply, do NOT resolve
-- NONCRITICAL (any author):
+- CRITICAL with ~Low or ~Very Low likelihood (any author):
+  - Downgrade to NONCRITICAL unless impact is catastrophic (data loss, auth bypass)
+- NONCRITICAL with ~High or ~Medium likelihood (any author):
   - Report only (no auto actions)
+- NONCRITICAL with ~Low or ~Very Low likelihood:
+  - If BOT: reply + resolve (explain the risk is too unlikely to warrant a fix)
+  - If HUMAN: report only
 - STYLE or FALSE-ALARM:
   - If BOT: reply + resolve
   - If HUMAN: report only (no auto actions)
@@ -86,7 +91,8 @@ Decision rules:
 Reply guidelines (BOT only):
 - 1–3 sentences max
 - Professional, factual
-- Explain why no change is needed (no behavior impact / consistency)
+- For STYLE/FALSE-ALARM: explain why no change is needed (no behavior impact / consistency)
+- For ~Low/~Very Low NONCRITICAL: acknowledge the point, explain the likelihood is too low to justify a fix at this time
 - No promises
 
 Resolve rules (BOT only):
