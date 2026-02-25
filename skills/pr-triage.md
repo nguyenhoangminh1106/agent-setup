@@ -19,14 +19,25 @@ Definitions:
 If unsure whether bot vs human: treat as HUMAN (report-only).
 
 Severity classification:
-- CRITICAL: correctness, security, crashes, data loss
+- CRITICAL: correctness, crashes, data loss, or security issues that are realistically exploitable
 - NONCRITICAL: valid but minor
-- FALSE-ALARM: incorrect or misunderstanding
+- FALSE-ALARM: incorrect, misunderstanding, or flagging intentional behavior
 - STYLE: cosmetic / formatting / preference
+
+Before assigning CRITICAL:
+- Ask "can this realistically happen in production given how the code is used?" If no → downgrade to NONCRITICAL or FALSE-ALARM.
+- Ask "could this be intentional given the feature's business purpose?" If yes or unsure → do NOT flag as CRITICAL, note the uncertainty instead.
+- Every CRITICAL must include an estimated real-world likelihood: ~High / ~Medium / ~Low / ~Very Low.
+- If likelihood is ~Low or ~Very Low, downgrade to NONCRITICAL unless the impact is catastrophic (data loss, auth bypass).
+
+Business context awareness:
+- Before flagging any issue, consider whether the behavior makes sense for what the feature is supposed to do.
+- If a reviewer flags something that looks like a business rule or intentional design choice, classify as FALSE-ALARM and explain why.
+- Do NOT treat "I don't understand why this works this way" as a reason to flag a risk.
 
 Objectives:
 - Read ALL unresolved PR review threads/comments.
-- Validate each claim.
+- Validate each claim — including whether the claim accounts for business intent.
 - Preserve consistency: if a suggestion would break existing patterns in the file/module, recommend IGNORE.
 - Only propose fixes for CRITICAL issues (in plan). No code changes.
 
@@ -93,6 +104,8 @@ B) Triage table (all unresolved threads BEFORE any actions)
 - File/location
 - Claim summary
 - Verdict
+- Real-world likelihood (for CRITICAL/NONCRITICAL): ~High / ~Medium / ~Low / ~Very Low
+- Business context check: Intentional? / Unclear / Not applicable
 - Recommended action: FIX PLAN / IGNORE / ASK / (BOT) REPLY+RESOLVE
 - Rationale
 
@@ -103,8 +116,11 @@ C) Bot replies posted (if any)
 D) Threads resolved (bot-only)
 - Thread IDs
 
-E) Minimal fix plan (ONLY for CRITICAL)
+E) Minimal fix plan (ONLY for CRITICAL with ~High or ~Medium likelihood)
+- Issue summary
+- Real-world likelihood + why
 - Minimal change + verification step
+- Note: skip fix plan for ~Low / ~Very Low likelihood unless impact is catastrophic
 
 F) Human follow-up needed
 - List of human threads where you recommend what I should reply/do next
