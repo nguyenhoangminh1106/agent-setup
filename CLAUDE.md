@@ -16,7 +16,7 @@ curl -fsSL https://raw.githubusercontent.com/nguyenhoangminh1106/agent-setup/mai
 ./install.sh
 ```
 
-The script installs these skills: `commit-push`, `pr-triage`, `branch-risk-review`, `worktree-create`, `worktree-remove`.
+The script installs these skills: `commit-push`, `pr-triage`, `branch-risk-review`, `worktree-create`, `worktree-remove`, `clean-ai-comments`.
 
 After editing skills locally, push and re-run `./install.sh` on other machines.
 
@@ -29,7 +29,8 @@ After editing skills locally, push and re-run `./install.sh` on other machines.
 
 1. Create `skills/<name>.md` with YAML frontmatter and instructions.
 2. Add `<name>` to the `SKILLS` array in `install.sh`.
-3. Commit, push, and re-run `install.sh` to deploy.
+3. Add the skill to the skills list in `CLAUDE.md` and add a section for it in `README.md`.
+4. Commit, push, and re-run `install.sh` to deploy.
 
 ## Core philosophy (reflected in all skills)
 

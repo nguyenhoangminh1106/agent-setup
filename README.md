@@ -24,7 +24,8 @@ agent-setup/
 │   ├── pr-triage.md
 │   ├── branch-risk-review.md
 │   ├── worktree-create.md
-│   └── worktree-remove.md
+│   ├── worktree-remove.md
+│   └── clean-ai-comments.md
 ├── install.sh
 └── README.md
 ````
@@ -136,6 +137,17 @@ Safely remove a Git worktree.
 
 * No force removal without explicit approval
 * No remote branch deletion unless explicitly requested
+
+---
+
+### `clean-ai-comments`
+
+Remove noisy, redundant AI-generated comments from new code only.
+
+* Only touches lines introduced in the current branch diff
+* Removes comments that restate the obvious (e.g. `// increment counter` above `count++`)
+* Keeps meaningful comments: WHY explanations, gotchas, links, directives
+* Reports every removed line before finishing
 
 ---
 
