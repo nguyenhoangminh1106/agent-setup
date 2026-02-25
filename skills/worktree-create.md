@@ -68,5 +68,6 @@ Procedure:
 7) Execute:
    - mkdir -p "<WORKTREES_BASE>"
    - Run the planned git worktree add command.
+   - cd "<WORKTREES_BASE>/<branch>"
    - Post-check: git worktree list
-   - Print the final worktree path.
+   - Print the final worktree path and confirm the current directory is now the worktree.
