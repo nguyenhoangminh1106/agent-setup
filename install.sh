@@ -7,25 +7,34 @@ TMP_DIR="$(mktemp -d)"
 cleanup() { rm -rf "$TMP_DIR"; }
 trap cleanup EXIT
 
-mkdir -p "$HOME/.claude/commands" "$HOME/.codex/prompts" "$HOME/.cursor/commands"
+# Install locations (user-level)
+mkdir -p \
+  "$HOME/.claude/commands" \
+  "$HOME/.codex/prompts" \
+  "$HOME/.cursor/commands"
 
-curl -fsSL "$REPO_RAW/skills/commit-push.md" -o "$TMP_DIR/commit-push.md"
-curl -fsSL "$REPO_RAW/skills/pr-triage.md" -o "$TMP_DIR/pr-triage.md"
-curl -fsSL "$REPO_RAW/skills/branch-risk-review.md" -o "$TMP_DIR/branch-risk-review.md"
+# Skills list
+SKILLS=(
+  "commit-push"
+  "pr-triage"
+  "branch-risk-review"
+  "worktree-create"
+  "worktree-remove"
+)
 
-cp "$TMP_DIR/commit-push.md" "$HOME/.claude/commands/commit-push.md"
-cp "$TMP_DIR/pr-triage.md" "$HOME/.claude/commands/pr-triage.md"
-cp "$TMP_DIR/branch-risk-review.md" "$HOME/.claude/commands/branch-risk-review.md"
+# Download
+for s in "${SKILLS[@]}"; do
+  curl -fsSL "$REPO_RAW/skills/${s}.md" -o "$TMP_DIR/${s}.md"
+done
 
-cp "$TMP_DIR/commit-push.md" "$HOME/.codex/prompts/commit-push.md"
-cp "$TMP_DIR/pr-triage.md" "$HOME/.codex/prompts/pr-triage.md"
-cp "$TMP_DIR/branch-risk-review.md" "$HOME/.codex/prompts/branch-risk-review.md"
-
-cp "$TMP_DIR/commit-push.md" "$HOME/.cursor/commands/commit-push.md"
-cp "$TMP_DIR/pr-triage.md" "$HOME/.cursor/commands/pr-triage.md"
-cp "$TMP_DIR/branch-risk-review.md" "$HOME/.cursor/commands/branch-risk-review.md"
+# Copy to each tool
+for s in "${SKILLS[@]}"; do
+  cp "$TMP_DIR/${s}.md" "$HOME/.claude/commands/${s}.md"
+  cp "$TMP_DIR/${s}.md" "$HOME/.codex/prompts/${s}.md"
+  cp "$TMP_DIR/${s}.md" "$HOME/.cursor/commands/${s}.md"
+done
 
 echo "Installed agent skills (all tools, all skills):"
-echo " - Claude : commit-push, pr-triage, branch-risk-review"
-echo " - Codex  : commit-push, pr-triage, branch-risk-review"
-echo " - Cursor : commit-push, pr-triage, branch-risk-review"
+echo " - Claude : ${SKILLS[*]}"
+echo " - Codex  : ${SKILLS[*]}"
+echo " - Cursor : ${SKILLS[*]}"
