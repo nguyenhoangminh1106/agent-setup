@@ -20,6 +20,7 @@ SKILLS=(
   "branch-risk-review"
   "worktree-create"
   "worktree-remove"
+  "clean-ai-comments"
 )
 
 # Download then install each skill
