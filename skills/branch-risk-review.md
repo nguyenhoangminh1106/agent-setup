@@ -47,6 +47,7 @@ Review the diff of a branch or PR for behavioral regressions, consistency issues
 - Minor style inconsistencies
 - Slightly unconventional but contained code
 - Skipping defensive checks that can't realistically fail
+- Missing DB migrations — assume the developer will run migrations separately before deploying; do NOT flag missing migrations as a blocker or risk
 
 ## Steps
 
