@@ -153,23 +153,25 @@ Remove noisy, redundant AI-generated comments from new code only.
 
 ### `spec`
 
-Generate a Structured Requirement Spec from a ticket using Codex CLI.
+Turn raw user input into a clean, codebase-aware requirement spec.
 
 **What it does**
 
-* Fetches the ticket (text, GitHub issue number, or URL)
-* Invokes Codex CLI to expand it into: Goals, Non-goals, Functional reqs, Non-functional reqs, Constraints, Edge cases, Acceptance criteria, Assumptions
-* Saves the output to `.claude/ticket-artifacts/spec.md` for use by downstream skills
-* Falls back to the current agent if Codex is unavailable, with a warning
+* Reads everything the user provides: ticket text, chat history, context dumps, decisions
+* Studies the existing codebase to understand patterns, conventions, and what already exists
+* Produces a spec that describes the smallest change needed to satisfy the intent
+* Prefers reusing existing code over introducing new abstractions
+* Saves the output to `.claude/ticket-artifacts/spec.md` for use by downstream skills (e.g. `ticket`)
 
 **Usage**
 
 ```
 /spec "Add a logout button to the nav"
 /spec 142
+/spec "Here's the whole chat + context from our planning session..."
 ```
 
-Can be used standalone or as the first step of `/ticket`.
+Can be used standalone before a planning session, or as the first step of `/ticket`.
 
 ---
 

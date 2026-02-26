@@ -56,7 +56,7 @@ Artifacts are passed as inline text embedded in the prompt — not as file paths
 
 ### Step 1 — Spec Generation (Codex CLI)
 
-Run the `spec` skill with `ticket` = `{{ticket}}`.
+Run the `spec` skill with `input` = `{{ticket}}`.
 
 The `spec` skill handles: fetching the ticket if it's an issue number/URL, invoking Codex CLI, and saving the output to `.claude/ticket-artifacts/spec.md`.
 

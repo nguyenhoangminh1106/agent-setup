@@ -1,86 +1,86 @@
 ---
-description: "Generate a Structured Requirement Spec from a ticket using Codex CLI. Embeds the ticket verbatim, expands it into Goals, Non-goals, Functional reqs, Constraints, Edge cases, Acceptance criteria, and Assumptions. Saves output as an artifact."
+description: "Read raw user input (ticket, chat, context dumps) and the existing codebase, then produce a clean requirement spec that minimizes changes and aligns with existing patterns."
 arguments:
-  - name: ticket
-    description: "Full ticket text, GitHub issue number, or URL describing the work to be done."
+  - name: input
+    description: "Raw user input: ticket text, chat history, context, decisions, or any combination. Can be a GitHub issue number/URL."
 ---
 
 ## Task
 
-Use Codex CLI to generate a Structured Requirement Spec from a ticket. The ticket is embedded verbatim and is the sole source of truth. Output is saved as a reusable artifact for downstream skills (e.g. `ticket`).
+Read everything the user provided — ticket, chat, context, decisions — then study the existing codebase to understand its patterns, conventions, and what already exists. Produce a clean, codebase-aware requirement spec that describes the smallest change needed to satisfy the intent, reusing existing code wherever possible.
 
 ## Rules
 
-- Never invent scope.
-- Never improve, reinterpret, or expand the ticket beyond what is stated.
-- If something is unclear, document the uncertainty — do not guess.
-- Ticket text is authoritative.
+- Read the codebase before writing the spec. Understanding what already exists is mandatory.
+- Prefer reusing existing code, patterns, and abstractions over introducing new ones.
+- It is acceptable to slightly adjust the stated approach if doing so results in a smaller diff and better alignment with the codebase — but never change the intent or outcome.
+- Never invent scope. If something is unclear, document the uncertainty.
+- Do not document things that don't need to change.
 
 ## Steps
 
-**1) Fetch ticket if needed**
+**1) Ingest all input**
 
-If `{{ticket}}` is a GitHub issue number or URL:
-```bash
-gh issue view {{ticket}} --json title,body,labels,assignees
+Read `{{input}}` in full. If it is a GitHub issue number or URL, fetch it first:
 ```
-Use the returned title + body as the ticket text. Otherwise use `{{ticket}}` as-is.
+gh issue view {{input}} --json title,body,labels,assignees,comments
+```
 
-**2) Switch to Codex CLI**
+Treat everything — ticket body, discussion comments, decisions, constraints — as context. Nothing is discarded.
 
-Invoke Codex with the ticket embedded verbatim:
+**2) Study the existing codebase**
 
-```bash
-codex "You are a requirements analyst. Given the following ticket, produce a Structured Requirement Spec.
+Before writing a single line of spec, read the relevant parts of the codebase:
+- Find files and modules related to the feature area described in the input.
+- Identify the existing patterns: how similar features are structured, named, and wired together.
+- Note what already exists that can be reused or extended rather than recreated.
+- Note what must NOT be touched (unrelated code, stable APIs, shared utilities with many callers).
 
-TICKET (verbatim):
+The goal: understand the path of least resistance through the codebase that still satisfies the intent.
+
+**3) Produce the spec**
+
+Write the spec in this format:
+
 ---
-{{ticket}}
----
 
-Output the spec in this exact format with no deviations:
+## Goal
+One paragraph. What the user wants to achieve and why.
 
-## Goals
-What the ticket wants to achieve.
+## Codebase alignment
+- Existing code that will be reused or extended (with file paths).
+- Patterns this change should follow.
+- Any deviation from the stated approach that reduces diff size, and why it's equivalent.
 
-## Non-goals
-What is explicitly out of scope.
+## What changes
+A focused list of what needs to be added or modified. Every item must be the minimum necessary.
+- For each: what changes, in which file, and why it can't be avoided.
 
-## Functional requirements
-Observable behaviors the implementation must produce.
-
-## Non-functional requirements
-Performance, accessibility, compatibility constraints.
-
-## Constraints
-Tech stack, file limits, must-not-touch areas.
-
-## Edge cases
-Boundary conditions and failure modes mentioned or implied.
+## What does NOT change
+Explicitly list areas that might seem related but should not be touched.
 
 ## Acceptance criteria
-Conditions under which the ticket is considered done.
+Concrete, testable conditions. Written from the user's perspective — what they can observe or verify.
+
+## Edge cases
+Boundary conditions and failure modes to handle.
 
 ## Assumptions
-Anything inferred that is not stated — flag every assumption explicitly with [ASSUMPTION].
+Anything inferred that is not stated. Flag each with [ASSUMPTION].
 
-Rules:
-- Never invent scope.
-- If something is unclear, document the uncertainty instead of guessing.
-- Ticket text is authoritative. Do not reinterpret it."
+## Open questions
+Anything unclear that a human must decide before implementation begins.
+
+---
+
+**4) Save artifact**
+
+Write the spec to `.claude/ticket-artifacts/spec.md`:
 ```
-
-**3) Save artifact**
-
-Save the full Codex output as **SPEC_ARTIFACT** in `.claude/ticket-artifacts/spec.md`:
-```bash
 mkdir -p .claude/ticket-artifacts
-# write Codex output to:
-.claude/ticket-artifacts/spec.md
 ```
+Save the spec content to `.claude/ticket-artifacts/spec.md`.
 
-**4) Display**
+**5) Display**
 
 Print the full spec to the user.
-
-If Codex is unavailable: generate the spec in-process using the same format and rules. Prepend a warning: `[FALLBACK: Codex unavailable — spec generated by current agent]`.
