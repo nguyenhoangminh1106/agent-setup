@@ -46,15 +46,26 @@ require claude
 require git
 require gh
 
-# Non-interactive wrappers
-# claude_run: runs Claude Code headlessly, streams output to stdout
+# WORKTREE is set after Step 2 once we know the path.
+# claude_run and codex_run use it to run in the correct directory.
+WORKTREE=""
+
+# claude_run: runs Claude Code headlessly in the worktree directory
 claude_run() {
-  claude --dangerously-skip-permissions -p "$1"
+  if [[ -n "$WORKTREE" ]]; then
+    claude --dangerously-skip-permissions --cwd "$WORKTREE" -p "$1"
+  else
+    claude --dangerously-skip-permissions -p "$1"
+  fi
 }
 
-# codex_run: runs Codex non-interactively, captures stdout
+# codex_run: runs Codex non-interactively in the worktree directory
 codex_run() {
-  codex exec --full-auto "$1"
+  if [[ -n "$WORKTREE" ]]; then
+    codex exec --full-auto -C "$WORKTREE" "$1"
+  else
+    codex exec --full-auto "$1"
+  fi
 }
 
 # ── Input: open editor if no ticket provided (skip if --skip-spec) ────────────
@@ -125,21 +136,21 @@ fi
 echo "Branch: $BRANCH"
 claude_run "/worktree-create branch=$BRANCH repo=$REPO"
 
-# cd into worktree so subsequent steps run inside it
-WORKTREE_PATH="$REPO/.claude/worktrees/$BRANCH"
-if [[ -d "$WORKTREE_PATH" ]]; then
-  cd "$WORKTREE_PATH"
-else
-  # fallback: try codex/cursor worktree paths
-  for base in "$REPO/.codex/worktrees" "$REPO/.cursor/worktrees"; do
-    if [[ -d "$base/$BRANCH" ]]; then
-      cd "$base/$BRANCH"
-      break
-    fi
-  done
+# Resolve worktree path — try claude, then codex, then cursor directories
+for base in "$REPO/.claude/worktrees" "$REPO/.codex/worktrees" "$REPO/.cursor/worktrees"; do
+  if [[ -d "$base/$BRANCH" ]]; then
+    WORKTREE="$base/$BRANCH"
+    break
+  fi
+done
+
+if [[ -z "$WORKTREE" ]]; then
+  die "Worktree not found after creation. Looked in .claude/.codex/.cursor/worktrees/$BRANCH"
 fi
 
-echo "Working directory: $(pwd)"
+echo "Working directory: $WORKTREE"
+# Also cd into it so shell-level git commands (Step 5 diff) run in the right place
+cd "$WORKTREE"
 
 # ── Step 3 — Plan (Codex) ─────────────────────────────────────────────────────
 log "Step 3 — Plan (Codex)"
@@ -205,7 +216,7 @@ log "Step 5 — Risk Review Loop"
 for ROUND in 1 2 3; do
   log "  Risk review round $ROUND / 3"
 
-  # 5a: fresh diff
+  # 5a: fresh diff (shell is cd'd into worktree, so git runs in the right branch)
   git fetch origin
   git diff origin/main...HEAD > "$ARTIFACTS/diff-current.md"
 
