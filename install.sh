@@ -40,6 +40,19 @@ for s in "${SKILLS[@]}"; do
   cp "$TMP_DIR/${s}.md" "$HOME/.cursor/commands/${s}.md"
 done
 
+# Install ticket.sh as a global CLI command
+mkdir -p "$HOME/bin"
+curl -fsSL "$REPO_RAW/ticket.sh" -o "$TMP_DIR/ticket.sh"
+if [[ -s "$TMP_DIR/ticket.sh" ]]; then
+  cp "$TMP_DIR/ticket.sh" "$HOME/bin/ticket"
+  chmod +x "$HOME/bin/ticket"
+  echo "Installed: ~/bin/ticket (run 'ticket <issue>' from any repo)"
+  echo "  → Make sure ~/bin is in your PATH: export PATH=\"\$HOME/bin:\$PATH\""
+else
+  echo "WARNING: failed to download ticket.sh — skipping CLI install" >&2
+fi
+
+echo ""
 echo "Installed agent skills (all tools, all skills):"
 echo " - Claude : ${SKILLS[*]}"
 echo " - Codex  : ${SKILLS[*]}"

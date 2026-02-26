@@ -1,0 +1,245 @@
+#!/usr/bin/env bash
+# ticket.sh — multi-agent ticket implementation pipeline
+# Usage: ./ticket.sh "<ticket text or GitHub issue number/URL>" [branch=<name>] [repo=<path>]
+set -euo pipefail
+
+# ── Args ──────────────────────────────────────────────────────────────────────
+TICKET="${1:-}"
+BRANCH=""
+REPO="$(pwd)"
+
+if [[ -z "$TICKET" ]]; then
+  echo "Usage: $0 \"<ticket text or issue number/URL>\" [branch=<name>] [repo=<path>]" >&2
+  exit 1
+fi
+
+for arg in "${@:2}"; do
+  case "$arg" in
+    branch=*) BRANCH="${arg#branch=}" ;;
+    repo=*)   REPO="${arg#repo=}" ;;
+  esac
+done
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+ARTIFACTS="$REPO/.ticket"
+mkdir -p "$ARTIFACTS"
+
+log()  { echo ""; echo "▶ $*"; echo ""; }
+die()  { echo ""; echo "ERROR: $*" >&2; exit 1; }
+
+require() {
+  command -v "$1" &>/dev/null || die "'$1' is not installed or not in PATH"
+}
+
+require codex
+require claude
+require git
+require gh
+
+# ── Step 1 — Spec (Codex via /spec skill) ─────────────────────────────────────
+log "Step 1 — Spec (Codex)"
+
+codex "/spec $TICKET" > "$ARTIFACTS/spec.md"
+
+[[ -s "$ARTIFACTS/spec.md" ]] || die "spec.md is empty — codex /spec failed"
+echo "Spec saved to $ARTIFACTS/spec.md"
+
+# ── Step 2 — Worktree (Claude Code) ───────────────────────────────────────────
+log "Step 2 — Worktree (Claude Code)"
+
+# Derive branch name from spec Goal line if not provided
+if [[ -z "$BRANCH" ]]; then
+  GOAL=$(grep -m1 "^##* Goal" "$ARTIFACTS/spec.md" -A1 | tail -1 | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9 ]//g' | tr ' ' '-' | cut -c1-50)
+  BRANCH="feat/${GOAL:-ticket-$(date +%s)}"
+fi
+
+echo "Branch: $BRANCH"
+claude "/worktree-create branch=$BRANCH repo=$REPO"
+
+# cd into worktree so subsequent steps run inside it
+WORKTREE_PATH="$REPO/.claude/worktrees/$BRANCH"
+if [[ -d "$WORKTREE_PATH" ]]; then
+  cd "$WORKTREE_PATH"
+else
+  # fallback: try codex/cursor worktree paths
+  for base in "$REPO/.codex/worktrees" "$REPO/.cursor/worktrees"; do
+    if [[ -d "$base/$BRANCH" ]]; then
+      cd "$base/$BRANCH"
+      break
+    fi
+  done
+fi
+
+echo "Working directory: $(pwd)"
+
+# ── Step 3 — Plan (Codex) ─────────────────────────────────────────────────────
+log "Step 3 — Plan (Codex)"
+
+SPEC=$(cat "$ARTIFACTS/spec.md")
+
+codex "You are a software planner. Produce a minimal-diff Execution Plan.
+
+SPEC:
+---
+$SPEC
+---
+
+Output format:
+
+## Files to change
+(each file + one-line reason)
+
+## Files NOT to touch
+(each + reason)
+
+## DB / schema changes
+NONE, or list each with justification. Only acceptable if strictly required by the spec with no alternative.
+
+## Implementation approach
+(prose, <=10 lines)
+
+## Known risks
+
+## Confirmation
+- Spec fidelity: confirmed
+- No refactors: confirmed
+- No unnecessary migrations: confirmed
+- No force pushes: confirmed
+
+Priorities (strict order):
+1. Spec fidelity
+2. Minimal diff — fewest files and lines possible
+3. Avoid DB/schema changes unless strictly required
+4. No behavior breakage
+5. Acceptable code quality" > "$ARTIFACTS/plan.md"
+
+[[ -s "$ARTIFACTS/plan.md" ]] || die "plan.md is empty — codex planning failed"
+echo "Plan saved to $ARTIFACTS/plan.md"
+
+# ── Step 4 — Implementation (Claude Code) ─────────────────────────────────────
+log "Step 4 — Implementation (Claude Code)"
+
+PLAN=$(cat "$ARTIFACTS/plan.md")
+
+claude "Execute this plan inside the current worktree. Match existing code style and patterns. No new dependencies or abstractions unless the spec requires them. Do not touch files outside the plan.
+
+Safety: no force push, no DROP/DELETE/ALTER TABLE/migrations, no changes to main or master. If any guard fires: STOP and report.
+
+PLAN:
+---
+$PLAN
+---"
+
+# ── Step 5 — Risk Review Loop (Codex reviews, Claude fixes) ───────────────────
+log "Step 5 — Risk Review Loop"
+
+for ROUND in 1 2 3; do
+  log "  Risk review round $ROUND / 3"
+
+  # 5a: fresh diff
+  git fetch origin
+  git diff origin/main...HEAD > "$ARTIFACTS/diff-current.md"
+
+  if [[ ! -s "$ARTIFACTS/diff-current.md" ]]; then
+    echo "  No diff found — branch has no changes. Stopping."
+    break
+  fi
+
+  # 5b: Codex reviews
+  SPEC=$(cat "$ARTIFACTS/spec.md")
+  DIFF=$(cat "$ARTIFACTS/diff-current.md")
+
+  codex "You are a code risk reviewer. Review the diff against the spec.
+
+SPEC:
+---
+$SPEC
+---
+
+DIFF (current branch state, captured just now):
+---
+$DIFF
+---
+
+Run the branch-risk-review skill. Classify each finding:
+- BLOCKER: must fix (regression, out-of-scope change, HIGH risk)
+- FIX: should fix (MEDIUM risk, consistency issue)
+- NOTE: informational only
+
+Explicitly check:
+- Scope drift: anything touched that the spec did not ask for?
+- Diff size: any unnecessary files or lines changed?
+- DB/schema changes (skip *.sql and migrations/ — humans write those): any ORM model or schema change not strictly required? → BLOCKER.
+- Intent loss: does the implementation still match the spec goals?
+- Hidden data risk: any writes, deletes, or transforms on existing data rows?" > "$ARTIFACTS/risk-${ROUND}.md"
+
+  echo "  Risk review saved to $ARTIFACTS/risk-${ROUND}.md"
+
+  # Check for BLOCKERs or FIXes
+  if ! grep -qiE "^-?\s*(BLOCKER|FIX):" "$ARTIFACTS/risk-${ROUND}.md"; then
+    echo "  No BLOCKER or FIX items — exiting review loop early."
+    break
+  fi
+
+  # 5c: Claude applies fixes
+  RISK=$(cat "$ARTIFACTS/risk-${ROUND}.md")
+
+  claude "Apply only the BLOCKER and FIX items from the risk review below. Minimal diffs only. No refactors. Ignore NOTE items.
+
+RISK REVIEW:
+---
+$RISK
+---"
+
+  if [[ "$ROUND" -eq 3 ]]; then
+    if grep -qiE "^-?\s*BLOCKER:" "$ARTIFACTS/risk-${ROUND}.md"; then
+      die "BLOCKERs still present after 3 rounds. Stopping — human review required."
+    fi
+  fi
+done
+
+# ── Step 6 — AI Comment Cleanup (Claude Code) ─────────────────────────────────
+log "Step 6 — AI Comment Cleanup (Claude Code)"
+claude "/clean-ai-comments"
+
+# ── Step 7 — Commit and Push (Claude Code) ────────────────────────────────────
+log "Step 7 — Commit and Push (Claude Code)"
+claude "/commit-push"
+
+# ── Step 8 — Final Report (Codex drafts) ──────────────────────────────────────
+log "Step 8 — Final Report (Codex)"
+
+SPEC=$(cat "$ARTIFACTS/spec.md")
+PLAN=$(cat "$ARTIFACTS/plan.md")
+RISK1=$(cat "$ARTIFACTS/risk-1.md" 2>/dev/null || echo "")
+RISK2=$(cat "$ARTIFACTS/risk-2.md" 2>/dev/null || echo "")
+RISK3=$(cat "$ARTIFACTS/risk-3.md" 2>/dev/null || echo "")
+
+codex "Produce a final delivery report.
+
+SPEC:
+$SPEC
+
+PLAN:
+$PLAN
+
+RISK REVIEWS:
+$RISK1
+$RISK2
+$RISK3
+
+Sections:
+## A) Summary — what was done, what was intentionally left out
+## B) Ticket alignment — map each acceptance criterion to the change that satisfies it; flag any unaddressed
+## C) Risk assessment — final level LOW/MEDIUM/HIGH; safe to merge? YES / YES WITH CAUTION / NO
+## D) How to test — step-by-step UI instructions; expected results; edge cases
+## E) Technical notes — files changed, assumptions, deferred work"
+
+echo ""
+echo "── Compare URL ──────────────────────────────────────────"
+gh pr view --json url --jq .url 2>/dev/null || {
+  base=$(git remote get-url origin | sed 's/\.git$//')
+  branch=$(git branch --show-current)
+  echo "${base}/compare/main...${branch}"
+}
+echo ""

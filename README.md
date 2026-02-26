@@ -29,6 +29,7 @@ agent-setup/
 │   ├── ticket.md
 │   └── spec.md
 ├── install.sh
+├── ticket.sh
 └── README.md
 ```
 
@@ -60,8 +61,13 @@ This installs skills to:
 * **Claude Code** → `~/.claude/commands/`
 * **OpenAI Codex** → `~/.codex/prompts/`
 * **Cursor** → `~/.cursor/commands/`
+* **Terminal CLI** → `~/bin/ticket` (the real multi-agent orchestrator)
 
-No global binaries. No background services.
+Make sure `~/bin` is in your PATH:
+
+```bash
+export PATH="$HOME/bin:$PATH"  # add to ~/.zshrc or ~/.bashrc
+```
 
 ---
 
@@ -185,21 +191,24 @@ This is not a single-agent prompt. It dispatches `codex` and `claude` as separat
 
 **Usage**
 
-Run from the repo root in your terminal:
+Run `ticket` from the repo root in your terminal (requires `codex` and `claude` CLIs both installed):
 
 ```bash
 # Paste ticket text inline
-/ticket "Add a logout button to the top nav that clears the session and redirects to /login"
+ticket "Add a logout button to the top nav that clears the session and redirects to /login"
 
 # GitHub issue number
-/ticket 142
+ticket 142
 
 # GitHub issue URL
-/ticket https://github.com/org/repo/issues/142
+ticket https://github.com/org/repo/issues/142
 
 # Optional: specify branch name or repo path
-/ticket 142 branch=fix/logout-button repo=/path/to/repo
+ticket 142 branch=fix/logout-button repo=/path/to/repo
 ```
+
+> **Note:** Running `/ticket` inside Claude Code or Codex will execute all steps with that single tool.
+> For true multi-agent execution (Codex for spec/planning/review, Claude for code/git), use the `ticket` CLI from your terminal.
 
 ---
 
