@@ -4,6 +4,7 @@
 #   ticket                        # opens editor to paste ticket
 #   ticket 142                    # GitHub issue number
 #   ticket "some text"            # inline text
+#   ticket --skip-spec            # skip spec step, use existing .ticket/spec.md
 #   ticket branch=fix/foo         # with optional branch name
 #   ticket repo=/path/to/repo     # with optional repo path
 set -euo pipefail
@@ -12,17 +13,23 @@ set -euo pipefail
 TICKET=""
 BRANCH=""
 REPO="$(pwd)"
+SKIP_SPEC=0
 
 for arg in "$@"; do
   case "$arg" in
-    branch=*) BRANCH="${arg#branch=}" ;;
-    repo=*)   REPO="${arg#repo=}" ;;
-    *)        TICKET="$arg" ;;
+    --skip-spec) SKIP_SPEC=1 ;;
+    branch=*)    BRANCH="${arg#branch=}" ;;
+    repo=*)      REPO="${arg#repo=}" ;;
+    *)           TICKET="$arg" ;;
   esac
 done
 
-# ── Input: open editor if no ticket provided ───────────────────────────────────
-if [[ -z "$TICKET" ]]; then
+# ── Input: open editor if no ticket provided (skip if --skip-spec) ────────────
+if [[ "$SKIP_SPEC" -eq 1 ]]; then
+  ARTIFACTS="$REPO/.ticket"
+  [[ -s "$ARTIFACTS/spec.md" ]] || { echo "ERROR: --skip-spec requires an existing .ticket/spec.md" >&2; exit 1; }
+  echo "Skipping spec — using existing $ARTIFACTS/spec.md"
+elif [[ -z "$TICKET" ]]; then
   INPUT_FILE="$(mktemp /tmp/ticket-input.XXXXXX.md)"
 
   cat > "$INPUT_FILE" <<'TEMPLATE'
@@ -70,12 +77,14 @@ require git
 require gh
 
 # ── Step 1 — Spec (Codex via /spec skill) ─────────────────────────────────────
-log "Step 1 — Spec (Codex)"
-
-codex "/spec $TICKET" > "$ARTIFACTS/spec.md"
-
-[[ -s "$ARTIFACTS/spec.md" ]] || die "spec.md is empty — codex /spec failed"
-echo "Spec saved to $ARTIFACTS/spec.md"
+if [[ "$SKIP_SPEC" -eq 0 ]]; then
+  log "Step 1 — Spec (Codex)"
+  codex "/spec $TICKET" > "$ARTIFACTS/spec.md"
+  [[ -s "$ARTIFACTS/spec.md" ]] || die "spec.md is empty — codex /spec failed"
+  echo "Spec saved to $ARTIFACTS/spec.md"
+else
+  log "Step 1 — Spec (skipped, using existing .ticket/spec.md)"
+fi
 
 # ── Step 2 — Worktree (Claude Code) ───────────────────────────────────────────
 log "Step 2 — Worktree (Claude Code)"
