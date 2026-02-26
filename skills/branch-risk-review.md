@@ -104,7 +104,7 @@ git diff origin/main...{{target}}
 **A) Review summary**
 - Target (branch or PR)
 - Overall risk level: LOW / MEDIUM / HIGH
-- Safe to merge? YES / YES WITH CAUTION / NO
+- Safe to merge? YES / YES WITH CAUTION / YES AFTER MIGRATION / NO
 
 **B) File-by-file analysis**
 For each changed file:
@@ -118,6 +118,7 @@ For each changed file:
 - Only list concrete scenarios where existing behavior could break in practice.
 - For each risk: what triggers it, how likely in real use, what the actual impact is.
 - Skip theoretical or "could happen if someone does X wrong" concerns.
+- Do NOT flag missing DB migrations as a risk — assume the developer handles migrations separately before deploying.
 
 **D) Simplicity and complexity notes**
 - Flag over-engineered code or added complexity that isn't justified.
