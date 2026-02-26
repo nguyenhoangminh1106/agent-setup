@@ -177,29 +177,101 @@ Can be used standalone before a planning session, or as the first step of `/tick
 
 ### `ticket`
 
-End-to-end ticket implementation pipeline.
+The top-level orchestrator. Takes a ticket and runs an end-to-end multi-agent pipeline — from spec to merged-ready branch — without human involvement during execution.
 
-**What it does**
-
-* Ingests a ticket (text, GitHub issue number, or URL) and expands it into a structured requirement spec (Goals, Non-goals, Functional reqs, Non-functional reqs, Constraints, Edge cases, Acceptance criteria, Assumptions)
-* Creates an isolated worktree via `worktree-create`
-* Generates a minimal-diff execution plan before touching any code
-* Implements the plan, matching existing patterns and staying strictly within ticket scope
-* Runs up to 3 rounds of `branch-risk-review`, applying only BLOCKER and FIX items
-* Cleans AI-generated comments via `clean-ai-comments`
-* Commits and pushes via `commit-push`
-* Produces a final report: Summary, Ticket Alignment, Risk Assessment, How to Test, Technical Notes, and GitHub compare URL
-
-**Safety rules**
-
-* No destructive git commands
-* No force pushes
-* No migrations executed
-* No changes to `main` or `master`
-* Never exceeds ticket scope
-* Stops and surfaces errors immediately — no silent failures
+This is not a single-agent prompt. It dispatches `codex` and `claude` as separate subprocess calls from the terminal, using each tool for what it does best. Artifacts are saved to disk between steps so nothing is ever passed as stale in-memory content.
 
 ---
+
+**Usage**
+
+Run from the repo root in your terminal:
+
+```bash
+# Paste ticket text inline
+/ticket "Add a logout button to the top nav that clears the session and redirects to /login"
+
+# GitHub issue number
+/ticket 142
+
+# GitHub issue URL
+/ticket https://github.com/org/repo/issues/142
+
+# Optional: specify branch name or repo path
+/ticket 142 branch=fix/logout-button repo=/path/to/repo
+```
+
+---
+
+**Execution model**
+
+`/ticket` is a terminal orchestrator — not running inside Claude Code or Codex. It dispatches both as peers:
+
+```
+terminal (/ticket)
+├── codex "/spec ..."              → .claude/ticket-artifacts/spec.md
+├── claude "/worktree-create ..."  → isolated branch + worktree
+├── codex "plan from spec..."      → .claude/ticket-artifacts/plan.md
+├── claude "implement plan..."     → code changes in worktree
+├── [up to 3 rounds]
+│   ├── git diff → diff-current.md       (fresh each round)
+│   ├── codex "review diff vs spec..."   → risk-N.md
+│   └── claude "apply BLOCKER+FIX..."
+├── claude "/clean-ai-comments"
+├── claude "/commit-push"
+└── codex "final report..."        → printed to terminal + compare URL
+```
+
+---
+
+**Step-by-step breakdown**
+
+| # | Step | Tool | What happens |
+|---|---|---|---|
+| 1 | Spec | **Codex (GPT-5.2)** via `/spec` skill | Reads ticket + codebase, produces a codebase-aligned requirement spec. Saved to `spec.md`. |
+| 2 | Worktree | **Claude Code** via `/worktree-create` | Creates an isolated branch and worktree. All code changes happen here — never on `main`. |
+| 3 | Plan | **Codex (GPT-5.2)** | Reads `spec.md`, produces a minimal-diff execution plan: files to touch, files to skip, DB changes (only if unavoidable). Saved to `plan.md`. |
+| 4 | Implement | **Claude Code** | Executes `plan.md` file-by-file. Matches existing patterns. No new dependencies or abstractions unless the spec explicitly requires them. |
+| 5 | Risk review | **Codex** reviews, **Claude Code** fixes (×3 max) | Each round: captures a fresh diff from disk, Codex reviews it against `spec.md`, Claude applies only BLOCKER and FIX items. Skips `*.sql` and `migrations/` — those are written by humans. |
+| 6 | Cleanup | **Claude Code** via `/clean-ai-comments` | Removes noisy AI-generated comments added in this branch only. |
+| 7 | Commit | **Claude Code** via `/commit-push` | Commits with a Conventional Commits message tied to the ticket ID. Pushes. No `--no-verify`. |
+| 8 | Report | **Codex** drafts, terminal prints | Final report: Summary, Ticket alignment, Risk verdict, How to test (UI steps), Technical notes, GitHub compare URL. |
+
+---
+
+**Artifact files**
+
+All intermediate outputs are saved to `.claude/ticket-artifacts/` in the repo:
+
+| File | Written by | Read by |
+|---|---|---|
+| `spec.md` | Step 1 (Codex / `/spec`) | Steps 3, 5, 8 |
+| `plan.md` | Step 3 (Codex) | Step 4 |
+| `diff-current.md` | Step 5a (git diff, fresh each round) | Step 5b (Codex) |
+| `risk-1.md` … `risk-3.md` | Step 5b (Codex) | Step 5c (Claude), Step 8 |
+
+Each tool reads from disk — never from a previous tool's in-memory state.
+
+---
+
+**Safety guarantees**
+
+* No destructive git commands (`--force`, `reset --hard`, `clean -f`, `branch -D`)
+* No force pushes — ever
+* No database migrations generated or executed
+* No changes to `main` or `master`
+* Never exceeds ticket scope — scope drift is a BLOCKER in every risk review round
+* Silent failures are not allowed — every error surfaces immediately and stops the pipeline
+
+---
+
+**What you get at the end**
+
+* A clean branch with a single well-described commit
+* A GitHub compare URL ready to open as a PR
+* A structured report covering: what was done and why, how each acceptance criterion was met, the final risk verdict, step-by-step UI test instructions, and any deferred work or known limitations
+
+The human's only job is to read the report, test in the UI, and decide whether to merge.
 
 ## Design Rules for All Skills
 
