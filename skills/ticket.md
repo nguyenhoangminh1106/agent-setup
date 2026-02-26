@@ -134,6 +134,11 @@ Output the plan in this format:
 ## Files NOT to touch
 (list + reason)
 
+## DB / schema changes
+State explicitly: NONE, or list each change with justification.
+A DB/schema change is only acceptable if the ticket explicitly requires it AND there is no way to satisfy the requirement without it.
+If a DB change can be deferred or avoided: omit it and note why.
+
 ## Implementation approach
 (prose, ≤10 lines)
 
@@ -143,14 +148,15 @@ Output the plan in this format:
 ## Confirmation
 - Ticket fidelity: confirmed
 - No refactors: confirmed
-- No migrations: confirmed
+- No migrations unless unavoidable: confirmed
 - No force pushes: confirmed
 
 Plan priorities (strict order):
 1. Ticket fidelity
-2. Minimal diff
-3. No behavior breakage
-4. Acceptable code quality"
+2. Minimal diff — touch the fewest files and lines possible
+3. Avoid DB/schema changes unless strictly required by the ticket
+4. No behavior breakage
+5. Acceptable code quality"
 ```
 
 Save the full Codex output as **PLAN_ARTIFACT**.
@@ -217,10 +223,13 @@ Run the branch-risk-review skill. For each finding classify as:
 - FIX: should fix (MEDIUM risk, consistency issue)
 - NOTE: informational only
 
-Also confirm:
-- No scope drift from the ticket
-- No intent loss
-- No hidden migration or data risk"
+Also explicitly check and report on each of these:
+- Scope drift: does the diff touch anything the ticket did not ask for?
+- Diff size: are there files or lines changed that were not necessary?
+- DB/schema changes: does the diff include any migration files, schema changes, seed data edits, or ORM model changes?
+  - If yes: is each one strictly required by the ticket, with no alternative? If not strictly required → flag as BLOCKER.
+- Intent loss: does the implementation still match the ticket's stated goals?
+- Hidden data risk: any writes, deletes, or transforms on existing data rows?"
 ```
 
 Save the Codex output as **RISK_ARTIFACT_N** (where N = round number 1, 2, or 3).
