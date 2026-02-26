@@ -11,7 +11,7 @@ arguments:
 
 ## Task
 
-Orchestrate a full ticket-to-branch workflow by explicitly delegating steps to Codex CLI (reasoning, spec, planning, risk review) and Claude Code (worktree, implementation, cleanup, commit). This is a multi-agent controller — not a single-prompt workflow. Each tool runs only the steps it is assigned. Outputs are passed as structured artifacts between tools. Never modify the main branch. Never exceed the ticket's scope.
+You are a top-level orchestrator running in the terminal at the repo root. You are not running inside Claude Code or Codex — you dispatch to both as separate subprocess calls. Each step explicitly names which tool to invoke. Outputs are saved as artifact files and passed between tools. Never modify the main branch. Never exceed the ticket's scope.
 
 ## Tool Assignment
 
@@ -38,272 +38,227 @@ Orchestrate a full ticket-to-branch workflow by explicitly delegating steps to C
 - Never skip pre-commit hooks (`--no-verify`).
 - Each tool must consume the previous tool's artifact verbatim — never summarize or re-interpret upstream output.
 
-## Context: How Tool Switching Works
+## Context: Execution Model
 
-When this skill says "switch to Codex CLI", the current agent (e.g. Claude Code) must invoke Codex CLI as a subprocess:
+This skill runs from the terminal at the repo root — not inside either tool. Each step is a subprocess call:
 
 ```bash
-codex "<prompt with embedded artifact>"
+# Codex steps:
+codex "...prompt with artifact embedded..."
+
+# Claude Code steps:
+claude "...prompt with artifact embedded..."
 ```
 
-When it says "switch to Claude Code", the orchestrator resumes in-process (Claude Code is the controller).
+Both are peers dispatched by this orchestrator. Neither is the "controller" of the other.
 
-Artifacts are passed as inline text embedded in the prompt — not as file paths unless the artifact is too large (>4000 chars), in which case write it to `.claude/ticket-artifacts/<step>.md` and reference the path.
+**Artifacts** are saved to `.claude/ticket-artifacts/` between steps so each tool reads the exact output of the previous one:
+- `spec.md` — output of the `spec` skill (Step 1)
+- `plan.md` — Codex planning output (Step 3)
+- `risk-1.md`, `risk-2.md`, `risk-3.md` — per-round risk review output (Step 5)
+
+Each tool reads its input artifact from disk and writes its output artifact to disk. Never pass stale in-memory content between steps.
 
 ## Steps
 
 ---
 
-### Step 1 — Spec Generation (Codex CLI)
+### Step 1 — Spec (spec skill)
 
-Run the `spec` skill with `input` = `{{ticket}}`.
+```bash
+claude "/spec {{ticket}}"
+```
 
-The `spec` skill handles: fetching the ticket if it's an issue number/URL, invoking Codex CLI, and saving the output to `.claude/ticket-artifacts/spec.md`.
-
-Once the `spec` skill completes, load **SPEC_ARTIFACT** from `.claude/ticket-artifacts/spec.md`.
-
-If the `spec` skill reports a fallback warning (Codex unavailable), note it in the final report.
+Output is saved to `.claude/ticket-artifacts/spec.md` by the `spec` skill.
 
 ---
 
-### Step 2 — Worktree Creation (Claude Code)
-
-**Stay in Claude Code.**
+### Step 2 — Worktree (worktree-create skill)
 
 Determine branch name:
 - If `{{branch}}` provided: use it.
-- Else: derive a kebab-case name from the ticket title, prefixed `feat/`, `fix/`, or `chore/` as appropriate.
-
-Run the `worktree-create` skill with:
-- `repo` = `{{repo}}` (or current directory)
-- `branch` = derived branch name
-
-Do not continue until `worktree-create` confirms the worktree path and current directory is inside it.
-
----
-
-### Step 3 — Planning (Codex CLI)
-
-**Switch to Codex CLI.**
-
-Embed the ticket and SPEC_ARTIFACT and instruct Codex to produce an Execution Plan:
+- Else: derive from the spec Goal line — kebab-case, prefixed `feat/`, `fix/`, or `chore/`.
 
 ```bash
-codex "You are a software planner. Given the ticket and requirement spec below, produce a minimal-diff Execution Plan.
+claude "/worktree-create branch=<branch> repo={{repo}}"
+```
 
-TICKET (verbatim):
----
-{{ticket}}
----
+Do not continue until the worktree path is confirmed and the working directory is inside it.
 
-REQUIREMENT SPEC:
----
-{{SPEC_ARTIFACT}}
 ---
 
-Output the plan in this format:
+### Step 3 — Plan (Codex)
+
+Read `.claude/ticket-artifacts/spec.md` into `$SPEC`.
+
+```bash
+codex "You are a software planner. Produce a minimal-diff Execution Plan.
+
+SPEC (from /spec skill):
+---
+$SPEC
+---
+
+Output format:
 
 ## Files to change
-(list each file + one-line reason)
+(each file + one-line reason)
 
 ## Files NOT to touch
-(list + reason)
+(each + reason)
 
 ## DB / schema changes
-State explicitly: NONE, or list each change with justification.
-A DB/schema change is only acceptable if the ticket explicitly requires it AND there is no way to satisfy the requirement without it.
-If a DB change can be deferred or avoided: omit it and note why.
+NONE, or list each with justification.
+Only acceptable if strictly required by the spec with no alternative.
 
 ## Implementation approach
 (prose, ≤10 lines)
 
 ## Known risks
-(list)
 
 ## Confirmation
-- Ticket fidelity: confirmed
+- Spec fidelity: confirmed
 - No refactors: confirmed
-- No migrations unless unavoidable: confirmed
+- No unnecessary migrations: confirmed
 - No force pushes: confirmed
 
-Plan priorities (strict order):
-1. Ticket fidelity
-2. Minimal diff — touch the fewest files and lines possible
-3. Avoid DB/schema changes unless strictly required by the ticket
+Priorities (strict order):
+1. Spec fidelity
+2. Minimal diff — fewest files and lines possible
+3. Avoid DB/schema changes unless strictly required
 4. No behavior breakage
 5. Acceptable code quality"
 ```
 
-Save the full Codex output as **PLAN_ARTIFACT**.
+Save output to `.claude/ticket-artifacts/plan.md`.
 
 ---
 
 ### Step 4 — Implementation (Claude Code)
 
-**Stay in Claude Code** (inside the worktree from Step 2).
-
-Execute PLAN_ARTIFACT file-by-file:
-- Match existing code style, naming conventions, and patterns.
-- Introduce no new dependencies or abstractions unless the ticket explicitly requires them.
-- Do not touch files outside the plan without stating why and stopping for input.
-
-Safety guards — if any fire: STOP, report the violation, wait for instruction:
-- No `git push --force` or `git push --force-with-lease`
-- No `DROP`, `DELETE FROM`, `ALTER TABLE`, or migration commands
-- No changes to `main` or `master`
-
----
-
-### Step 5 — Risk Review Loop (Codex CLI reviews, Claude Code fixes)
-
-Run up to 3 rounds. **Each round reviews the current state of the code, not a cached diff.**
-
-**Each round, in order:**
-
-**5a) Capture a fresh diff (Claude Code)**
-
-Before invoking Codex, always re-run this to get the current state of the branch:
+Read `.claude/ticket-artifacts/plan.md` into `$PLAN`.
 
 ```bash
-git fetch origin
-CURRENT_DIFF=$(git diff origin/main...HEAD)
+claude "Execute this plan inside the current worktree. Match existing code style and patterns. No new dependencies or abstractions unless the spec requires them. Do not touch files outside the plan.
+
+Safety: no force push, no DROP/DELETE/ALTER TABLE/migrations, no changes to main or master. If any guard fires: STOP and report.
+
+PLAN:
+---
+$PLAN
+---"
 ```
 
-Verify `CURRENT_DIFF` is non-empty. If empty: the branch has no changes — STOP and report.
+---
 
-Do NOT reuse a diff captured in a previous round. Every round must capture its own.
+### Step 5 — Risk Review Loop (Codex reviews, Claude Code fixes)
 
-**5b) Switch to Codex CLI** — pass the freshly captured diff:
+Run up to 3 rounds. Each round uses a freshly captured diff — never reuse a diff from a prior round.
+
+**Each round:**
+
+**5a) Capture fresh diff**
+```bash
+git fetch origin
+git diff origin/main...HEAD > .claude/ticket-artifacts/diff-current.md
+```
+If the diff is empty: STOP and report — no changes on branch.
+
+**5b) Codex reviews**
+
+Read all artifacts fresh from disk:
+```bash
+SPEC=$(cat .claude/ticket-artifacts/spec.md)
+DIFF=$(cat .claude/ticket-artifacts/diff-current.md)
+```
 
 ```bash
-codex "You are a code risk reviewer. Review the diff below against the original ticket and spec.
+codex "You are a code risk reviewer. Review the diff against the spec.
 
-TICKET (verbatim):
+SPEC:
 ---
-{{ticket}}
----
-
-REQUIREMENT SPEC:
----
-{{SPEC_ARTIFACT}}
+$SPEC
 ---
 
-DIFF (current state of branch, captured just now):
+DIFF (captured just now — current branch state):
 ---
-${CURRENT_DIFF}
+$DIFF
 ---
 
-Run the branch-risk-review skill. For each finding classify as:
-- BLOCKER: must fix (HIGH risk, behavioral regression, or out-of-scope change)
+Run the branch-risk-review skill. Classify each finding:
+- BLOCKER: must fix (regression, out-of-scope change, HIGH risk)
 - FIX: should fix (MEDIUM risk, consistency issue)
 - NOTE: informational only
 
-Also explicitly check and report on each of these:
-- Scope drift: does the diff touch anything the ticket did not ask for?
-- Diff size: are there files or lines changed that were not necessary?
-- DB/schema changes: does the diff include any schema changes, seed data edits, or ORM model changes?
-  - Skip migration files (*.sql, migrations/) entirely — humans write those separately. Do not flag, review, or comment on them.
-  - For everything else: is each change strictly required by the ticket, with no alternative? If not strictly required → flag as BLOCKER.
-- Intent loss: does the implementation still match the ticket's stated goals?
+Explicitly check:
+- Scope drift: anything touched that the spec did not ask for?
+- Diff size: any unnecessary files or lines changed?
+- DB/schema changes (skip *.sql and migrations/ — humans write those): any ORM model or schema change not strictly required? → BLOCKER if so.
+- Intent loss: does the implementation still match the spec goals?
 - Hidden data risk: any writes, deletes, or transforms on existing data rows?"
 ```
 
-Save the Codex output as **RISK_ARTIFACT_N** (where N = round number 1, 2, or 3).
+Save output to `.claude/ticket-artifacts/risk-<N>.md`.
 
-**5c) Switch to Claude Code** — apply only BLOCKER and FIX items using minimal diffs. Do not refactor. Do not address NOTE items.
+**5c) Claude Code applies fixes**
+```bash
+claude "Apply only the BLOCKER and FIX items from the risk review below. Minimal diffs only. No refactors. Ignore NOTE items.
 
-Exit the loop early if no BLOCKER or FIX items remain after any round.
+RISK REVIEW:
+---
+$(cat .claude/ticket-artifacts/risk-<N>.md)
+---"
+```
 
-After round 3, if BLOCKER items still exist: STOP and report. Do not proceed to commit.
+Exit the loop early if no BLOCKER or FIX items remain. After round 3, if BLOCKERs still exist: STOP and report.
 
 ---
 
 ### Step 6 — AI Comment Cleanup (Claude Code)
 
-**Stay in Claude Code.**
-
-Run the `clean-ai-comments` skill with no arguments (diffs current branch against `origin/main`).
-
-Report lines removed. If nothing to remove, continue.
+```bash
+claude "/clean-ai-comments"
+```
 
 ---
 
 ### Step 7 — Commit and Push (Claude Code)
 
-**Stay in Claude Code.**
+```bash
+claude "/commit-push"
+```
 
-Run the `commit-push` skill.
-
-- Commit message must follow Conventional Commits and include the ticket identifier if available (e.g., `feat: add login page (#42)`).
-- Do not pass `--no-verify`.
-- If a hook fails: fix minimally, re-stage, retry once. If it fails again: STOP and report.
+Commit message must follow Conventional Commits and include the ticket identifier if available (e.g. `feat: add login page (#42)`). No `--no-verify`. If a hook fails: fix minimally, retry once. If it fails again: STOP and report.
 
 ---
 
-### Step 8 — Final Report (Codex CLI drafts, Claude Code publishes)
+### Step 8 — Final Report (Codex drafts, terminal publishes)
 
-**Switch to Codex CLI** to synthesize the report:
+Read all artifacts:
+```bash
+SPEC=$(cat .claude/ticket-artifacts/spec.md)
+PLAN=$(cat .claude/ticket-artifacts/plan.md)
+RISK1=$(cat .claude/ticket-artifacts/risk-1.md 2>/dev/null)
+RISK2=$(cat .claude/ticket-artifacts/risk-2.md 2>/dev/null)
+RISK3=$(cat .claude/ticket-artifacts/risk-3.md 2>/dev/null)
+```
 
 ```bash
-codex "You are a technical writer. Produce a final delivery report from the artifacts below.
+codex "Produce a final delivery report.
 
-TICKET (verbatim):
----
-{{ticket}}
----
+SPEC: $SPEC
+PLAN: $PLAN
+RISK REVIEWS: $RISK1 $RISK2 $RISK3
 
-REQUIREMENT SPEC:
----
-{{SPEC_ARTIFACT}}
----
-
-PLAN:
----
-{{PLAN_ARTIFACT}}
----
-
-RISK REVIEW FINDINGS (all rounds — RISK_ARTIFACT_1, RISK_ARTIFACT_2, RISK_ARTIFACT_3 as available):
----
-{{RISK_ARTIFACT_1}}
-
-{{RISK_ARTIFACT_2}}
-
-{{RISK_ARTIFACT_3}}
----
-
-Include these sections:
-
-## A) Summary
-- What was implemented and why
-- What was intentionally not done
-
-## B) Ticket alignment
-- Map each acceptance criterion to the code change that satisfies it
-- Flag any criterion not addressed
-- Confirm no out-of-scope changes
-
-## C) Risk assessment
-- Final risk level: LOW / MEDIUM / HIGH
-- Remaining NOTEs
-- Safe to merge? YES / YES WITH CAUTION / NO
-
-## D) How to test (UI-focused)
-- Where to navigate
-- Actions to take
-- Expected results
-- Edge cases to verify
-
-## E) Technical notes
-- Files changed
-- Assumptions made
-- Deferred work or known limitations"
+Sections:
+## A) Summary — what was done, what was intentionally left out
+## B) Ticket alignment — map each acceptance criterion to the change that satisfies it; flag any unaddressed
+## C) Risk assessment — final level LOW/MEDIUM/HIGH; safe to merge? YES / YES WITH CAUTION / NO
+## D) How to test — step-by-step UI instructions; expected results; edge cases
+## E) Technical notes — files changed, assumptions, deferred work"
 ```
 
-**Switch back to Claude Code** to append:
-
-```
-## F) GitHub compare URL
-```
+Append the compare URL:
 ```bash
 gh pr view --json url --jq .url 2>/dev/null || {
   base=$(git remote get-url origin | sed 's/\.git$//')
@@ -312,4 +267,4 @@ gh pr view --json url --jq .url 2>/dev/null || {
 }
 ```
 
-Print the complete report to the user.
+Print the complete report.
