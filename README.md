@@ -25,7 +25,8 @@ agent-setup/
 │   ├── branch-risk-review.md
 │   ├── worktree-create.md
 │   ├── worktree-remove.md
-│   └── clean-ai-comments.md
+│   ├── clean-ai-comments.md
+│   └── ticket.md
 ├── install.sh
 └── README.md
 ````
@@ -148,6 +149,30 @@ Remove noisy, redundant AI-generated comments from new code only.
 * Removes comments that restate the obvious (e.g. `// increment counter` above `count++`)
 * Keeps meaningful comments: WHY explanations, gotchas, links, directives
 * Reports every removed line before finishing
+
+### `ticket`
+
+End-to-end ticket implementation pipeline.
+
+**What it does**
+
+* Ingests a ticket (text, GitHub issue number, or URL) and expands it into a structured requirement spec (Goals, Non-goals, Functional reqs, Non-functional reqs, Constraints, Edge cases, Acceptance criteria, Assumptions)
+* Creates an isolated worktree via `worktree-create`
+* Generates a minimal-diff execution plan before touching any code
+* Implements the plan, matching existing patterns and staying strictly within ticket scope
+* Runs up to 3 rounds of `branch-risk-review`, applying only BLOCKER and FIX items
+* Cleans AI-generated comments via `clean-ai-comments`
+* Commits and pushes via `commit-push`
+* Produces a final report: Summary, Ticket Alignment, Risk Assessment, How to Test, Technical Notes, and GitHub compare URL
+
+**Safety rules**
+
+* No destructive git commands
+* No force pushes
+* No migrations executed
+* No changes to `main` or `master`
+* Never exceeds ticket scope
+* Stops and surfaces errors immediately — no silent failures
 
 ---
 
