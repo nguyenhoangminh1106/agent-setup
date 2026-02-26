@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 # ticket.sh — multi-agent ticket implementation pipeline
 # Usage:
-#   ticket                        # opens editor to paste ticket
-#   ticket 142                    # GitHub issue number
-#   ticket "some text"            # inline text
-#   ticket --skip-spec            # skip spec step, use existing .ticket/spec.md
-#   ticket branch=fix/foo         # with optional branch name
-#   ticket repo=/path/to/repo     # with optional repo path
+#   ticket                              # opens editor to paste ticket
+#   ticket 142                          # GitHub issue number
+#   ticket "some text"                  # inline text
+#   ticket --skip-spec branch=fix/foo   # skip spec, use existing .ticket/fix/foo/spec.md
+#   ticket branch=fix/foo               # with optional branch name
+#   ticket repo=/path/to/repo           # with optional repo path
+#
+# Artifacts are stored per-branch in .ticket/<branch>/ so multiple tickets
+# in the same repo never overwrite each other.
 set -euo pipefail
 
 # ── Args ──────────────────────────────────────────────────────────────────────
@@ -26,8 +29,9 @@ done
 
 # ── Input: open editor if no ticket provided (skip if --skip-spec) ────────────
 if [[ "$SKIP_SPEC" -eq 1 ]]; then
-  ARTIFACTS="$REPO/.ticket"
-  [[ -s "$ARTIFACTS/spec.md" ]] || { echo "ERROR: --skip-spec requires an existing .ticket/spec.md" >&2; exit 1; }
+  [[ -n "$BRANCH" ]] || { echo "ERROR: --skip-spec requires branch=<name> so we know which artifact folder to use" >&2; exit 1; }
+  ARTIFACTS="$ARTIFACTS_ROOT/$BRANCH"
+  [[ -s "$ARTIFACTS/spec.md" ]] || { echo "ERROR: --skip-spec requires an existing .ticket/$BRANCH/spec.md" >&2; exit 1; }
   echo "Skipping spec — using existing $ARTIFACTS/spec.md"
 elif [[ -z "$TICKET" ]]; then
   INPUT_FILE="$(mktemp /tmp/ticket-input.XXXXXX.md)"
@@ -61,8 +65,11 @@ TEMPLATE
 fi
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
-ARTIFACTS="$REPO/.ticket"
-mkdir -p "$ARTIFACTS"
+# Artifacts are namespaced by branch so multiple tickets in the same repo
+# never overwrite each other. Branch name is resolved after Step 1 (spec).
+# ARTIFACTS is set properly once BRANCH is known (after Step 1).
+ARTIFACTS_ROOT="$REPO/.ticket"
+mkdir -p "$ARTIFACTS_ROOT"
 
 log()  { echo ""; echo "▶ $*"; echo ""; }
 die()  { echo ""; echo "ERROR: $*" >&2; exit 1; }
@@ -79,20 +86,29 @@ require gh
 # ── Step 1 — Spec (Codex via /spec skill) ─────────────────────────────────────
 if [[ "$SKIP_SPEC" -eq 0 ]]; then
   log "Step 1 — Spec (Codex)"
-  codex "/spec $TICKET" > "$ARTIFACTS/spec.md"
-  [[ -s "$ARTIFACTS/spec.md" ]] || die "spec.md is empty — codex /spec failed"
-  echo "Spec saved to $ARTIFACTS/spec.md"
-else
-  log "Step 1 — Spec (skipped, using existing .ticket/spec.md)"
+  SPEC_TMP="$ARTIFACTS_ROOT/.spec-tmp.md"
+  codex "/spec $TICKET" > "$SPEC_TMP"
+  [[ -s "$SPEC_TMP" ]] || die "spec output is empty — codex /spec failed"
 fi
 
 # ── Step 2 — Worktree (Claude Code) ───────────────────────────────────────────
 log "Step 2 — Worktree (Claude Code)"
 
-# Derive branch name from spec Goal line if not provided
+# Derive branch name from spec if not provided
 if [[ -z "$BRANCH" ]]; then
-  GOAL=$(grep -m1 "^##* Goal" "$ARTIFACTS/spec.md" -A1 | tail -1 | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9 ]//g' | tr ' ' '-' | cut -c1-50)
+  SPEC_FOR_BRANCH="${SPEC_TMP:-$ARTIFACTS_ROOT/.spec-tmp.md}"
+  GOAL=$(grep -m1 "^##* Goal" "$SPEC_FOR_BRANCH" -A1 | tail -1 | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9 ]//g' | tr ' ' '-' | cut -c1-50)
   BRANCH="feat/${GOAL:-ticket-$(date +%s)}"
+fi
+
+# Now that branch is known, set the namespaced artifact dir
+ARTIFACTS="$ARTIFACTS_ROOT/$BRANCH"
+mkdir -p "$ARTIFACTS"
+
+# Move spec into the namespaced folder
+if [[ "$SKIP_SPEC" -eq 0 ]]; then
+  mv "$SPEC_TMP" "$ARTIFACTS/spec.md"
+  echo "Spec saved to $ARTIFACTS/spec.md"
 fi
 
 echo "Branch: $BRANCH"

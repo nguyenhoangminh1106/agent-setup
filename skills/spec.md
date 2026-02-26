@@ -75,11 +75,13 @@ Anything unclear that a human must decide before implementation begins.
 
 **4) Save artifact**
 
-Write the spec to `.ticket/spec.md`:
+Write the spec to `.ticket/spec.md` (standalone usage):
 ```
 mkdir -p .ticket
 ```
 Save the spec content to `.ticket/spec.md`.
+
+Note: when invoked via `ticket.sh`, the orchestrator moves this into `.ticket/<branch>/spec.md` automatically — each ticket gets its own folder so runs never overwrite each other.
 
 **5) Display**
 
