@@ -30,7 +30,7 @@ agent-setup/
 │   └── spec.md
 ├── install.sh
 └── README.md
-````
+```
 
 * `skills/`
   Each file defines **one agent skill** in Markdown.
@@ -214,8 +214,8 @@ terminal (/ticket)
 ├── codex "plan from spec..."      → .ticket/plan.md
 ├── claude "implement plan..."     → code changes in worktree
 ├── [up to 3 rounds]
-│   ├── git diff → diff-current.md       (fresh each round)
-│   ├── codex "review diff vs spec..."   → risk-N.md
+│   ├── git diff → .ticket/diff-current.md       (fresh each round)
+│   ├── codex "review diff vs spec..."   → .ticket/risk-N.md
 │   └── claude "apply BLOCKER+FIX..."
 ├── claude "/clean-ai-comments"
 ├── claude "/commit-push"

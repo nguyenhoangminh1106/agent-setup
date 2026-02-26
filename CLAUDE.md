@@ -22,7 +22,7 @@ After editing skills locally, push and re-run `./install.sh` on other machines.
 
 ## Architecture
 
-- `skills/*.md` — One file per skill. Each file is a self-contained prompt with YAML frontmatter (`name`, `description`, `arguments`) followed by procedural instructions for the agent.
+- `skills/*.md` — One file per skill. Each file is a self-contained prompt with YAML frontmatter (`description`, `arguments`) followed by procedural instructions for the agent.
 - `install.sh` — Downloads each skill from the raw GitHub URL and copies it into the three tool directories. No build step; files are copied as-is.
 
 ## Adding a new skill
