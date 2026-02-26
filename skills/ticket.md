@@ -175,11 +175,24 @@ Safety guards — if any fire: STOP, report the violation, wait for instruction:
 
 ### Step 5 — Risk Review Loop (Codex CLI reviews, Claude Code fixes)
 
-Run up to 3 rounds.
+Run up to 3 rounds. **Each round reviews the current state of the code, not a cached diff.**
 
-**Each round:**
+**Each round, in order:**
 
-**5a) Switch to Codex CLI** — run `branch-risk-review` with full context:
+**5a) Capture a fresh diff (Claude Code)**
+
+Before invoking Codex, always re-run this to get the current state of the branch:
+
+```bash
+git fetch origin
+CURRENT_DIFF=$(git diff origin/main...HEAD)
+```
+
+Verify `CURRENT_DIFF` is non-empty. If empty: the branch has no changes — STOP and report.
+
+Do NOT reuse a diff captured in a previous round. Every round must capture its own.
+
+**5b) Switch to Codex CLI** — pass the freshly captured diff:
 
 ```bash
 codex "You are a code risk reviewer. Review the diff below against the original ticket and spec.
@@ -194,9 +207,9 @@ REQUIREMENT SPEC:
 {{SPEC_ARTIFACT}}
 ---
 
-DIFF:
+DIFF (current state of branch, captured just now):
 ---
-$(git diff origin/main...HEAD)
+${CURRENT_DIFF}
 ---
 
 Run the branch-risk-review skill. For each finding classify as:
@@ -210,7 +223,9 @@ Also confirm:
 - No hidden migration or data risk"
 ```
 
-**5b) Switch to Claude Code** — apply only BLOCKER and FIX items using minimal diffs. Do not refactor. Do not address NOTE items.
+Save the Codex output as **RISK_ARTIFACT_N** (where N = round number 1, 2, or 3).
+
+**5c) Switch to Claude Code** — apply only BLOCKER and FIX items using minimal diffs. Do not refactor. Do not address NOTE items.
 
 Exit the loop early if no BLOCKER or FIX items remain after any round.
 
@@ -262,9 +277,13 @@ PLAN:
 {{PLAN_ARTIFACT}}
 ---
 
-RISK REVIEW FINDINGS (all rounds):
+RISK REVIEW FINDINGS (all rounds — RISK_ARTIFACT_1, RISK_ARTIFACT_2, RISK_ARTIFACT_3 as available):
 ---
-{{RISK_ARTIFACTS}}
+{{RISK_ARTIFACT_1}}
+
+{{RISK_ARTIFACT_2}}
+
+{{RISK_ARTIFACT_3}}
 ---
 
 Include these sections:
