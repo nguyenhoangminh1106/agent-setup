@@ -16,7 +16,7 @@ curl -fsSL https://raw.githubusercontent.com/nguyenhoangminh1106/agent-setup/mai
 ./install.sh
 ```
 
-The script installs these skills: `commit-push`, `pr-triage`, `branch-risk-review`, `worktree-create`, `worktree-remove`, `clean-ai-comments`, `ticket`.
+The script installs these skills: `commit-push`, `pr-triage`, `branch-risk-review`, `worktree-create`, `worktree-remove`, `clean-ai-comments`, `ticket`, `spec`.
 
 After editing skills locally, push and re-run `./install.sh` on other machines.
 

@@ -22,6 +22,7 @@ SKILLS=(
   "worktree-remove"
   "clean-ai-comments"
   "ticket"
+  "spec"
 )
 
 # Download then install each skill

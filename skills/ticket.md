@@ -56,38 +56,13 @@ Artifacts are passed as inline text embedded in the prompt — not as file paths
 
 ### Step 1 — Spec Generation (Codex CLI)
 
-**Switch to Codex CLI.**
+Run the `spec` skill with `ticket` = `{{ticket}}`.
 
-Embed the full ticket verbatim and instruct Codex to produce a Structured Requirement Spec:
+The `spec` skill handles: fetching the ticket if it's an issue number/URL, invoking Codex CLI, and saving the output to `.claude/ticket-artifacts/spec.md`.
 
-```bash
-codex "You are a requirements analyst. Given the following ticket, produce a Structured Requirement Spec.
+Once the `spec` skill completes, load **SPEC_ARTIFACT** from `.claude/ticket-artifacts/spec.md`.
 
-TICKET (verbatim):
----
-{{ticket}}
----
-
-Output the spec in this exact format:
-
-## Goals
-## Non-goals
-## Functional requirements
-## Non-functional requirements
-## Constraints
-## Edge cases
-## Acceptance criteria
-## Assumptions (flag each — do not invent scope)
-
-Rules:
-- Never invent scope.
-- If something is unclear, document the uncertainty instead of guessing.
-- Ticket text is authoritative. Do not reinterpret it."
-```
-
-Save the full Codex output as **SPEC_ARTIFACT**.
-
-If Codex is unavailable: Claude Code generates the spec using the same format and rules. Flag this fallback in the final report.
+If the `spec` skill reports a fallback warning (Codex unavailable), note it in the final report.
 
 ---
 

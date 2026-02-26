@@ -26,7 +26,8 @@ agent-setup/
 │   ├── worktree-create.md
 │   ├── worktree-remove.md
 │   ├── clean-ai-comments.md
-│   └── ticket.md
+│   ├── ticket.md
+│   └── spec.md
 ├── install.sh
 └── README.md
 ````
@@ -149,6 +150,28 @@ Remove noisy, redundant AI-generated comments from new code only.
 * Removes comments that restate the obvious (e.g. `// increment counter` above `count++`)
 * Keeps meaningful comments: WHY explanations, gotchas, links, directives
 * Reports every removed line before finishing
+
+### `spec`
+
+Generate a Structured Requirement Spec from a ticket using Codex CLI.
+
+**What it does**
+
+* Fetches the ticket (text, GitHub issue number, or URL)
+* Invokes Codex CLI to expand it into: Goals, Non-goals, Functional reqs, Non-functional reqs, Constraints, Edge cases, Acceptance criteria, Assumptions
+* Saves the output to `.claude/ticket-artifacts/spec.md` for use by downstream skills
+* Falls back to the current agent if Codex is unavailable, with a warning
+
+**Usage**
+
+```
+/spec "Add a logout button to the nav"
+/spec 142
+```
+
+Can be used standalone or as the first step of `/ticket`.
+
+---
 
 ### `ticket`
 
