@@ -1,24 +1,57 @@
 #!/usr/bin/env bash
 # ticket.sh — multi-agent ticket implementation pipeline
-# Usage: ./ticket.sh "<ticket text or GitHub issue number/URL>" [branch=<name>] [repo=<path>]
+# Usage:
+#   ticket                        # opens editor to paste ticket
+#   ticket 142                    # GitHub issue number
+#   ticket "some text"            # inline text
+#   ticket branch=fix/foo         # with optional branch name
+#   ticket repo=/path/to/repo     # with optional repo path
 set -euo pipefail
 
 # ── Args ──────────────────────────────────────────────────────────────────────
-TICKET="${1:-}"
+TICKET=""
 BRANCH=""
 REPO="$(pwd)"
 
-if [[ -z "$TICKET" ]]; then
-  echo "Usage: $0 \"<ticket text or issue number/URL>\" [branch=<name>] [repo=<path>]" >&2
-  exit 1
-fi
-
-for arg in "${@:2}"; do
+for arg in "$@"; do
   case "$arg" in
     branch=*) BRANCH="${arg#branch=}" ;;
     repo=*)   REPO="${arg#repo=}" ;;
+    *)        TICKET="$arg" ;;
   esac
 done
+
+# ── Input: open editor if no ticket provided ───────────────────────────────────
+if [[ -z "$TICKET" ]]; then
+  INPUT_FILE="$(mktemp /tmp/ticket-input.XXXXXX.md)"
+
+  cat > "$INPUT_FILE" <<'TEMPLATE'
+<!-- Paste your ticket, chat history, context, screenshots descriptions, decisions below. -->
+<!-- Delete these comment lines when done. Save and close to continue. -->
+
+TEMPLATE
+
+  # prefer VS Code, fall back to $EDITOR, then nano
+  if command -v code &>/dev/null; then
+    echo "Opening VS Code — paste your ticket, save, and close the tab to continue..."
+    code --wait "$INPUT_FILE"
+  elif [[ -n "${EDITOR:-}" ]]; then
+    echo "Opening $EDITOR — paste your ticket, save and exit to continue..."
+    "$EDITOR" "$INPUT_FILE"
+  else
+    echo "Opening nano — paste your ticket, then Ctrl+X → Y → Enter to continue..."
+    nano "$INPUT_FILE"
+  fi
+
+  # strip comment lines and leading/trailing blank lines
+  TICKET=$(sed '/^<!--/d' "$INPUT_FILE" | sed '/^$/N;/^\n$/d' | xargs -0 echo -n)
+  rm -f "$INPUT_FILE"
+
+  if [[ -z "$TICKET" ]]; then
+    echo "No input provided — exiting." >&2
+    exit 1
+  fi
+fi
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 ARTIFACTS="$REPO/.ticket"
