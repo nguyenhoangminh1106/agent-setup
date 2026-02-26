@@ -1,8 +1,8 @@
 ---
-description: Remove noisy, redundant AI-generated comments introduced in the current branch diff. Only touches lines added in the diff — never modifies pre-existing code.
+description: "Remove noisy, redundant AI-generated comments introduced in the current branch diff. Only touches lines added in the diff — never modifies pre-existing code."
 arguments:
   - name: target
-    description: Branch name or PR number/URL. If omitted, diffs current branch against origin/main.
+    description: "Branch name or PR number/URL. If omitted, diffs current branch against origin/main."
 ---
 
 ## Task

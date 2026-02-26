@@ -1,12 +1,12 @@
 ---
-description: Safely remove a git worktree by branch or path. ASK before removal/force. Optionally delete the branch after removing (ask first).
+description: "Safely remove a git worktree by branch or path. ASK before removal/force. Optionally delete the branch after removing (ask first)."
 arguments:
   - name: repo
-    description: Optional path to the git repo. If omitted, use current directory.
+    description: "Optional path to the git repo. If omitted, use current directory."
   - name: target
-    description: Branch name OR worktree path to remove.
+    description: "Branch name OR worktree path to remove."
   - name: delete_branch
-    description: Optional. If "true", propose deleting the branch after worktree removal (still ASK).
+    description: "Optional. If 'true', propose deleting the branch after worktree removal (still ASK)."
 ---
 
 ## Task

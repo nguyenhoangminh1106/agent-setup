@@ -1,8 +1,8 @@
 ---
-description: Read-only PR triage. Auto reply+resolve ONLY for bot threads (STYLE/FALSE-ALARM). Human threads: report only.
+description: "Read-only PR triage. Auto reply+resolve ONLY for bot threads (STYLE/FALSE-ALARM). Human threads: report only."
 arguments:
   - name: pr
-    description: PR number or URL (e.g. 123 or https://github.com/org/repo/pull/123)
+    description: "PR number or URL (e.g. 123 or https://github.com/org/repo/pull/123)"
 ---
 
 ## Task

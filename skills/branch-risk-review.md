@@ -1,8 +1,8 @@
 ---
-description: Read-only risk-focused review of branch/PR changes. Ensures no behavior breakage and alignment with existing code style. No code edits.
+description: "Read-only risk-focused review of branch/PR changes. Ensures no behavior breakage and alignment with existing code style. No code edits."
 arguments:
   - name: target
-    description: Branch name or PR number/URL to review
+    description: "Branch name or PR number/URL to review"
 ---
 
 ## Task

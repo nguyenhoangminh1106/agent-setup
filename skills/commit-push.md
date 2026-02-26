@@ -1,5 +1,5 @@
 ---
-description: Create ONE clean commit for all uncommitted changes and push to the current branch.
+description: "Create ONE clean commit for all uncommitted changes and push to the current branch."
 ---
 
 ## Task

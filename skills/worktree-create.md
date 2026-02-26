@@ -1,12 +1,12 @@
 ---
-description: Create or reuse a git worktree for a branch. Auto-infers branch name from context, checks local/remote, and runs with minimal confirmation.
+description: "Create or reuse a git worktree for a branch. Auto-infers branch name from context, checks local/remote, and runs with minimal confirmation."
 arguments:
   - name: repo
-    description: Optional path to the git repo. If omitted, use current directory.
+    description: "Optional path to the git repo. If omitted, use current directory."
   - name: branch
-    description: Desired branch name. If omitted, infer from chat context and auto-generate a kebab-case name.
+    description: "Desired branch name. If omitted, infer from chat context and auto-generate a kebab-case name."
   - name: base
-    description: Optional base ref if creating a new branch (default: origin/main if exists, else main, else HEAD).
+    description: "Optional base ref if creating a new branch (default: origin/main if exists, else main, else HEAD)."
 ---
 
 ## Task
