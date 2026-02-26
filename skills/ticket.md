@@ -17,7 +17,7 @@ You are a top-level orchestrator running in the terminal at the repo root. You a
 
 | Step | Tool | Reason |
 |---|---|---|
-| 1. Ingest + spec | **Codex CLI** | Strong structured reasoning, long context |
+| 1. Spec (`/spec` skill) | **Codex CLI (GPT-5.2)** | Strong structured reasoning, codebase-aware spec generation |
 | 2. Worktree creation | **Claude Code** | Repo-aware, safe git ops |
 | 3. Planning | **Codex CLI** | Diff-minimization and plan discipline |
 | 4. Implementation | **Claude Code** | Safer code edits, repo-aware |
@@ -63,10 +63,10 @@ Each tool reads its input artifact from disk and writes its output artifact to d
 
 ---
 
-### Step 1 — Spec (spec skill)
+### Step 1 — Spec (spec skill via Codex)
 
 ```bash
-claude "/spec {{ticket}}"
+codex "/spec {{ticket}}"
 ```
 
 Output is saved to `.claude/ticket-artifacts/spec.md` by the `spec` skill.
