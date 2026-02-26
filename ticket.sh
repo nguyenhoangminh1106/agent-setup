@@ -27,6 +27,36 @@ for arg in "$@"; do
   esac
 done
 
+# ── Helpers ───────────────────────────────────────────────────────────────────
+# Artifacts are namespaced by branch so multiple tickets in the same repo
+# never overwrite each other. Branch name is resolved after Step 1 (spec).
+# ARTIFACTS is set properly once BRANCH is known (after Step 1).
+ARTIFACTS_ROOT="$REPO/.ticket"
+mkdir -p "$ARTIFACTS_ROOT"
+
+log()  { echo ""; echo "▶ $*"; echo ""; }
+die()  { echo ""; echo "ERROR: $*" >&2; exit 1; }
+
+require() {
+  command -v "$1" &>/dev/null || die "'$1' is not installed or not in PATH"
+}
+
+require codex
+require claude
+require git
+require gh
+
+# Non-interactive wrappers
+# claude_run: runs Claude Code headlessly, streams output to stdout
+claude_run() {
+  claude --dangerously-skip-permissions -p "$1"
+}
+
+# codex_run: runs Codex non-interactively, captures stdout
+codex_run() {
+  codex exec "$1" --ask-for-approval never
+}
+
 # ── Input: open editor if no ticket provided (skip if --skip-spec) ────────────
 if [[ "$SKIP_SPEC" -eq 1 ]]; then
   [[ -n "$BRANCH" ]] || { echo "ERROR: --skip-spec requires branch=<name> so we know which artifact folder to use" >&2; exit 1; }
@@ -64,30 +94,11 @@ TEMPLATE
   fi
 fi
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
-# Artifacts are namespaced by branch so multiple tickets in the same repo
-# never overwrite each other. Branch name is resolved after Step 1 (spec).
-# ARTIFACTS is set properly once BRANCH is known (after Step 1).
-ARTIFACTS_ROOT="$REPO/.ticket"
-mkdir -p "$ARTIFACTS_ROOT"
-
-log()  { echo ""; echo "▶ $*"; echo ""; }
-die()  { echo ""; echo "ERROR: $*" >&2; exit 1; }
-
-require() {
-  command -v "$1" &>/dev/null || die "'$1' is not installed or not in PATH"
-}
-
-require codex
-require claude
-require git
-require gh
-
 # ── Step 1 — Spec (Codex via /spec skill) ─────────────────────────────────────
 if [[ "$SKIP_SPEC" -eq 0 ]]; then
   log "Step 1 — Spec (Codex)"
   SPEC_TMP="$ARTIFACTS_ROOT/.spec-tmp.md"
-  codex "/spec $TICKET" > "$SPEC_TMP"
+  codex_run "/spec $TICKET" > "$SPEC_TMP"
   [[ -s "$SPEC_TMP" ]] || die "spec output is empty — codex /spec failed"
 fi
 
@@ -112,7 +123,7 @@ if [[ "$SKIP_SPEC" -eq 0 ]]; then
 fi
 
 echo "Branch: $BRANCH"
-claude "/worktree-create branch=$BRANCH repo=$REPO"
+claude_run "/worktree-create branch=$BRANCH repo=$REPO"
 
 # cd into worktree so subsequent steps run inside it
 WORKTREE_PATH="$REPO/.claude/worktrees/$BRANCH"
@@ -135,7 +146,7 @@ log "Step 3 — Plan (Codex)"
 
 SPEC=$(cat "$ARTIFACTS/spec.md")
 
-codex "You are a software planner. Produce a minimal-diff Execution Plan.
+codex_run "You are a software planner. Produce a minimal-diff Execution Plan.
 
 SPEC:
 ---
@@ -179,7 +190,7 @@ log "Step 4 — Implementation (Claude Code)"
 
 PLAN=$(cat "$ARTIFACTS/plan.md")
 
-claude "Execute this plan inside the current worktree. Match existing code style and patterns. No new dependencies or abstractions unless the spec requires them. Do not touch files outside the plan.
+claude_run "Execute this plan inside the current worktree. Match existing code style and patterns. No new dependencies or abstractions unless the spec requires them. Do not touch files outside the plan.
 
 Safety: no force push, no DROP/DELETE/ALTER TABLE/migrations, no changes to main or master. If any guard fires: STOP and report.
 
@@ -207,7 +218,7 @@ for ROUND in 1 2 3; do
   SPEC=$(cat "$ARTIFACTS/spec.md")
   DIFF=$(cat "$ARTIFACTS/diff-current.md")
 
-  codex "You are a code risk reviewer. Review the diff against the spec.
+  codex_run "You are a code risk reviewer. Review the diff against the spec.
 
 SPEC:
 ---
@@ -242,7 +253,7 @@ Explicitly check:
   # 5c: Claude applies fixes
   RISK=$(cat "$ARTIFACTS/risk-${ROUND}.md")
 
-  claude "Apply only the BLOCKER and FIX items from the risk review below. Minimal diffs only. No refactors. Ignore NOTE items.
+  claude_run "Apply only the BLOCKER and FIX items from the risk review below. Minimal diffs only. No refactors. Ignore NOTE items.
 
 RISK REVIEW:
 ---
@@ -258,11 +269,11 @@ done
 
 # ── Step 6 — AI Comment Cleanup (Claude Code) ─────────────────────────────────
 log "Step 6 — AI Comment Cleanup (Claude Code)"
-claude "/clean-ai-comments"
+claude_run "/clean-ai-comments"
 
 # ── Step 7 — Commit and Push (Claude Code) ────────────────────────────────────
 log "Step 7 — Commit and Push (Claude Code)"
-claude "/commit-push"
+claude_run "/commit-push"
 
 # ── Step 8 — Final Report (Codex drafts) ──────────────────────────────────────
 log "Step 8 — Final Report (Codex)"
@@ -273,7 +284,7 @@ RISK1=$(cat "$ARTIFACTS/risk-1.md" 2>/dev/null || echo "")
 RISK2=$(cat "$ARTIFACTS/risk-2.md" 2>/dev/null || echo "")
 RISK3=$(cat "$ARTIFACTS/risk-3.md" 2>/dev/null || echo "")
 
-codex "Produce a final delivery report.
+codex_run "Produce a final delivery report.
 
 SPEC:
 $SPEC

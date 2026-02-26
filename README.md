@@ -210,6 +210,12 @@ ticket 142 branch=fix/logout-button repo=/path/to/repo
 > **Note:** Running `/ticket` inside Claude Code or Codex will execute all steps with that single tool.
 > For true multi-agent execution (Codex for spec/planning/review, Claude for code/git), use the `ticket` CLI from your terminal.
 
+**Requirements**
+
+Both CLIs must be installed and in PATH:
+- `claude` — Claude Code CLI (`claude -p` headless mode used internally)
+- `codex` — OpenAI Codex CLI (`codex exec --ask-for-approval never` used internally)
+
 ---
 
 **Execution model**
