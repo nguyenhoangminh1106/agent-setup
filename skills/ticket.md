@@ -226,8 +226,9 @@ Run the branch-risk-review skill. For each finding classify as:
 Also explicitly check and report on each of these:
 - Scope drift: does the diff touch anything the ticket did not ask for?
 - Diff size: are there files or lines changed that were not necessary?
-- DB/schema changes: does the diff include any migration files, schema changes, seed data edits, or ORM model changes?
-  - If yes: is each one strictly required by the ticket, with no alternative? If not strictly required → flag as BLOCKER.
+- DB/schema changes: does the diff include any schema changes, seed data edits, or ORM model changes?
+  - Skip migration files (*.sql, migrations/) entirely — humans write those separately. Do not flag, review, or comment on them.
+  - For everything else: is each change strictly required by the ticket, with no alternative? If not strictly required → flag as BLOCKER.
 - Intent loss: does the implementation still match the ticket's stated goals?
 - Hidden data risk: any writes, deletes, or transforms on existing data rows?"
 ```
