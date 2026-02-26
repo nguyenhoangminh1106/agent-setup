@@ -54,7 +54,7 @@ claude_run() {
 
 # codex_run: runs Codex non-interactively, captures stdout
 codex_run() {
-  codex exec "$1" --ask-for-approval never
+  codex exec --full-auto "$1"
 }
 
 # ── Input: open editor if no ticket provided (skip if --skip-spec) ────────────
