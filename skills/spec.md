@@ -87,16 +87,23 @@ Note: when invoked via `ticket.sh`, the orchestrator moves this into `.ticket/<b
 
 Print the full spec to the user.
 
-**6) Print next command**
+**6) Print the terminal command — THIS STEP IS MANDATORY**
 
-Derive a kebab-case branch name from the Goal line (prefix `feat/`, `fix/`, or `chore/` as appropriate), then print this block exactly so the user can copy-paste it:
+Derive a kebab-case branch name from the Goal line:
+- Use `feat/` for new features, `fix/` for bug fixes, `chore/` for maintenance
+- Lowercase, hyphens only, max 50 chars
+
+Then print EXACTLY this block as the very last thing in your response, with the real branch name substituted in:
 
 ```
 ─────────────────────────────────────────────
-Spec saved to .ticket/spec.md
+✅ Spec saved to .ticket/spec.md
 
-Run this in your terminal to continue:
+Run in your terminal to continue:
 
   ticket --skip-spec branch=<derived-branch-name>
+
 ─────────────────────────────────────────────
 ```
+
+Do not skip this. Do not summarise it. Print the full block with the exact `ticket` command on its own line.
