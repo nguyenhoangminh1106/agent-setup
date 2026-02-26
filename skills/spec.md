@@ -75,11 +75,11 @@ Anything unclear that a human must decide before implementation begins.
 
 **4) Save artifact**
 
-Write the spec to `.claude/ticket-artifacts/spec.md`:
+Write the spec to `.ticket/spec.md`:
 ```
-mkdir -p .claude/ticket-artifacts
+mkdir -p .ticket
 ```
-Save the spec content to `.claude/ticket-artifacts/spec.md`.
+Save the spec content to `.ticket/spec.md`.
 
 **5) Display**
 

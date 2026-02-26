@@ -161,7 +161,7 @@ Turn raw user input into a clean, codebase-aware requirement spec.
 * Studies the existing codebase to understand patterns, conventions, and what already exists
 * Produces a spec that describes the smallest change needed to satisfy the intent
 * Prefers reusing existing code over introducing new abstractions
-* Saves the output to `.claude/ticket-artifacts/spec.md` for use by downstream skills (e.g. `ticket`)
+* Saves the output to `.ticket/spec.md` for use by downstream skills (e.g. `ticket`)
 
 **Usage**
 
@@ -209,9 +209,9 @@ Run from the repo root in your terminal:
 
 ```
 terminal (/ticket)
-├── codex "/spec ..."              → .claude/ticket-artifacts/spec.md
+├── codex "/spec ..."              → .ticket/spec.md
 ├── claude "/worktree-create ..."  → isolated branch + worktree
-├── codex "plan from spec..."      → .claude/ticket-artifacts/plan.md
+├── codex "plan from spec..."      → .ticket/plan.md
 ├── claude "implement plan..."     → code changes in worktree
 ├── [up to 3 rounds]
 │   ├── git diff → diff-current.md       (fresh each round)
@@ -241,7 +241,7 @@ terminal (/ticket)
 
 **Artifact files**
 
-All intermediate outputs are saved to `.claude/ticket-artifacts/` in the repo:
+All intermediate outputs are saved to `.ticket/` in the repo:
 
 | File | Written by | Read by |
 |---|---|---|
