@@ -59,6 +59,8 @@ Both are peers dispatched by this orchestrator. Neither is the "controller" of t
 
 Each tool reads its input artifact from disk and writes its output artifact to disk. Never pass stale in-memory content between steps.
 
+**CRITICAL — never inline large artifacts as shell variables.** Always pass artifact paths to the tool and let the tool read them. Inlining large files via `$VAR` expansion hits shell `ARG_MAX` limits and can OOM the process.
+
 ## Steps
 
 ---
@@ -100,15 +102,12 @@ Do not continue until the worktree path is confirmed and the working directory i
 Step 3 — Plan: skipped (using existing .ticket/<branch>/plan.md)
 ```
 
-Otherwise, read `.ticket/<branch>/spec.md` into `$SPEC`.
+Otherwise:
 
 ```bash
 codex "You are a software planner. Produce a minimal-diff Execution Plan.
 
-SPEC (from /spec skill):
----
-$SPEC
----
+Read the spec from disk: .ticket/<branch>/spec.md
 
 Output format:
 
@@ -147,17 +146,12 @@ Save output to `.ticket/<branch>/plan.md`.
 
 ### Step 4 — Implementation (Claude Code)
 
-Read `.ticket/<branch>/plan.md` into `$PLAN`.
-
 ```bash
 claude "Execute this plan inside the current worktree. Match existing code style and patterns. No new dependencies or abstractions unless the spec requires them. Do not touch files outside the plan.
 
 Safety: no force push, no DROP/DELETE/ALTER TABLE/migrations, no changes to main or master. If any guard fires: STOP and report.
 
-PLAN:
----
-$PLAN
----"
+Read the plan from disk: .ticket/<branch>/plan.md"
 ```
 
 ---
@@ -177,24 +171,12 @@ If the diff is empty: STOP and report — no changes on branch.
 
 **5b) Codex reviews**
 
-Read all artifacts fresh from disk:
-```bash
-SPEC=$(cat .ticket/<branch>/spec.md)
-DIFF=$(cat .ticket/<branch>/diff-current.md)
-```
-
 ```bash
 codex "You are a code risk reviewer. Review the diff against the spec.
 
-SPEC:
----
-$SPEC
----
-
-DIFF (captured just now — current branch state):
----
-$DIFF
----
+Read both artifacts fresh from disk:
+- Spec: .ticket/<branch>/spec.md
+- Diff: .ticket/<branch>/diff-current.md
 
 Run the branch-risk-review skill. Classify each finding:
 - BLOCKER: must fix (regression, out-of-scope change, HIGH risk)
@@ -213,12 +195,9 @@ Save output to `.ticket/<branch>/risk-<N>.md`.
 
 **5c) Claude Code applies fixes**
 ```bash
-claude "Apply only the BLOCKER and FIX items from the risk review below. Minimal diffs only. No refactors. Ignore NOTE items.
+claude "Apply only the BLOCKER and FIX items from the risk review. Minimal diffs only. No refactors. Ignore NOTE items.
 
-RISK REVIEW:
----
-$(cat .ticket/<branch>/risk-<N>.md)
----"
+Read the risk review from disk: .ticket/<branch>/risk-<N>.md"
 ```
 
 Exit the loop early if no BLOCKER or FIX items remain. After round 3, if BLOCKERs still exist: STOP and report.
@@ -245,21 +224,15 @@ Commit message must follow Conventional Commits and include the ticket identifie
 
 ### Step 8 — Final Report (Codex drafts, terminal publishes)
 
-Read all artifacts:
-```bash
-SPEC=$(cat .ticket/<branch>/spec.md)
-PLAN=$(cat .ticket/<branch>/plan.md)
-RISK1=$(cat .ticket/<branch>/risk-1.md 2>/dev/null)
-RISK2=$(cat .ticket/<branch>/risk-2.md 2>/dev/null)
-RISK3=$(cat .ticket/<branch>/risk-3.md 2>/dev/null)
-```
-
 ```bash
 codex "Produce a final delivery report.
 
-SPEC: $SPEC
-PLAN: $PLAN
-RISK REVIEWS: $RISK1 $RISK2 $RISK3
+Read all artifacts from disk:
+- Spec: .ticket/<branch>/spec.md
+- Plan: .ticket/<branch>/plan.md
+- Risk review 1 (if exists): .ticket/<branch>/risk-1.md
+- Risk review 2 (if exists): .ticket/<branch>/risk-2.md
+- Risk review 3 (if exists): .ticket/<branch>/risk-3.md
 
 Sections:
 ## A) Summary — what was done, what was intentionally left out
