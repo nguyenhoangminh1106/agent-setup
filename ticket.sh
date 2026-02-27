@@ -4,23 +4,23 @@
 #   ticket                              # opens editor to paste ticket
 #   ticket 142                          # GitHub issue number
 #   ticket "some text"                  # inline text
-#   ticket --skip-spec branch=fix/foo   # skip spec, use existing .ticket/fix/foo/spec.md
-#   ticket branch=fix/foo               # with optional branch name
+#   ticket branch=fix/foo               # resume a branch — auto-skips spec/plan if artifacts exist
 #   ticket repo=/path/to/repo           # with optional repo path
 #
 # Artifacts are stored per-branch in .ticket/<branch>/ so multiple tickets
 # in the same repo never overwrite each other.
+# If spec.md already exists for the branch, spec is skipped automatically.
+# If plan.md already exists for the branch, planning is skipped automatically.
 set -euo pipefail
 
 # ── Args ──────────────────────────────────────────────────────────────────────
 TICKET=""
 BRANCH=""
 REPO="$(pwd)"
-SKIP_SPEC=0
 
 for arg in "$@"; do
   case "$arg" in
-    --skip-spec) SKIP_SPEC=1 ;;
+    --skip-spec) ;;  # kept for backwards compat, now a no-op (auto-detected)
     branch=*)    BRANCH="${arg#branch=}" ;;
     repo=*)      REPO="${arg#repo=}" ;;
     *)           TICKET="$arg" ;;
@@ -53,7 +53,7 @@ WORKTREE=""
 # claude_run: runs Claude Code headlessly in the worktree directory
 claude_run() {
   if [[ -n "$WORKTREE" ]]; then
-    claude --dangerously-skip-permissions --cwd "$WORKTREE" -p "$1"
+    (cd "$WORKTREE" && claude --dangerously-skip-permissions -p "$1")
   else
     claude --dangerously-skip-permissions -p "$1"
   fi
@@ -68,12 +68,11 @@ codex_run() {
   fi
 }
 
-# ── Input: open editor if no ticket provided (skip if --skip-spec) ────────────
-if [[ "$SKIP_SPEC" -eq 1 ]]; then
-  [[ -n "$BRANCH" ]] || { echo "ERROR: --skip-spec requires branch=<name> so we know which artifact folder to use" >&2; exit 1; }
+# ── Input: open editor if no ticket provided ───────────────────────────────────
+# If branch is given and spec already exists, we can skip input entirely.
+if [[ -n "$BRANCH" && -s "$ARTIFACTS_ROOT/$BRANCH/spec.md" ]]; then
   ARTIFACTS="$ARTIFACTS_ROOT/$BRANCH"
-  [[ -s "$ARTIFACTS/spec.md" ]] || { echo "ERROR: --skip-spec requires an existing .ticket/$BRANCH/spec.md" >&2; exit 1; }
-  echo "Skipping spec — using existing $ARTIFACTS/spec.md"
+  echo "Found existing spec at $ARTIFACTS/spec.md — skipping input and spec generation."
 elif [[ -z "$TICKET" ]]; then
   INPUT_FILE="$(mktemp /tmp/ticket-input.XXXXXX.md)"
 
@@ -106,35 +105,32 @@ TEMPLATE
 fi
 
 # ── Step 1 — Spec (Codex via /spec skill) ─────────────────────────────────────
-if [[ "$SKIP_SPEC" -eq 0 ]]; then
+# Auto-skip if spec already exists for this branch (ARTIFACTS already set above).
+if [[ -z "${ARTIFACTS:-}" ]]; then
   log "Step 1 — Spec (Codex)"
   SPEC_TMP="$ARTIFACTS_ROOT/.spec-tmp.md"
   codex_run "/spec $TICKET" > "$SPEC_TMP"
   [[ -s "$SPEC_TMP" ]] || die "spec output is empty — codex /spec failed"
+
+  # Derive branch name from spec if not provided
+  if [[ -z "$BRANCH" ]]; then
+    GOAL=$(grep -m1 "^##* Goal" "$SPEC_TMP" -A1 | tail -1 | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9 ]//g' | tr ' ' '-' | cut -c1-50)
+    BRANCH="feat/${GOAL:-ticket-$(date +%s)}"
+  fi
+
+  ARTIFACTS="$ARTIFACTS_ROOT/$BRANCH"
+  mkdir -p "$ARTIFACTS"
+  mv "$SPEC_TMP" "$ARTIFACTS/spec.md"
+  echo "Spec saved to $ARTIFACTS/spec.md"
+else
+  echo "Step 1 — Spec: skipped (using existing $ARTIFACTS/spec.md)"
 fi
 
 # ── Step 2 — Worktree (Claude Code) ───────────────────────────────────────────
 log "Step 2 — Worktree (Claude Code)"
 
-# Derive branch name from spec if not provided
-if [[ -z "$BRANCH" ]]; then
-  SPEC_FOR_BRANCH="${SPEC_TMP:-$ARTIFACTS_ROOT/.spec-tmp.md}"
-  GOAL=$(grep -m1 "^##* Goal" "$SPEC_FOR_BRANCH" -A1 | tail -1 | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9 ]//g' | tr ' ' '-' | cut -c1-50)
-  BRANCH="feat/${GOAL:-ticket-$(date +%s)}"
-fi
-
-# Now that branch is known, set the namespaced artifact dir
-ARTIFACTS="$ARTIFACTS_ROOT/$BRANCH"
-mkdir -p "$ARTIFACTS"
-
-# Move spec into the namespaced folder
-if [[ "$SKIP_SPEC" -eq 0 ]]; then
-  mv "$SPEC_TMP" "$ARTIFACTS/spec.md"
-  echo "Spec saved to $ARTIFACTS/spec.md"
-fi
-
 echo "Branch: $BRANCH"
-claude_run "/worktree-create branch=$BRANCH repo=$REPO"
+claude_run "/worktree-create branch=$BRANCH repo=$REPO yes=true"
 
 # Resolve worktree path — try claude, then codex, then cursor directories
 for base in "$REPO/.claude/worktrees" "$REPO/.codex/worktrees" "$REPO/.cursor/worktrees"; do
@@ -153,11 +149,15 @@ echo "Working directory: $WORKTREE"
 cd "$WORKTREE"
 
 # ── Step 3 — Plan (Codex) ─────────────────────────────────────────────────────
-log "Step 3 — Plan (Codex)"
+# Auto-skip if plan already exists for this branch.
+if [[ -s "$ARTIFACTS/plan.md" ]]; then
+  echo "Step 3 — Plan: skipped (using existing $ARTIFACTS/plan.md)"
+else
+  log "Step 3 — Plan (Codex)"
 
-SPEC=$(cat "$ARTIFACTS/spec.md")
+  SPEC=$(cat "$ARTIFACTS/spec.md")
 
-codex_run "You are a software planner. Produce a minimal-diff Execution Plan.
+  codex_run "You are a software planner. Produce a minimal-diff Execution Plan.
 
 SPEC:
 ---
@@ -193,8 +193,9 @@ Priorities (strict order):
 4. No behavior breakage
 5. Acceptable code quality" > "$ARTIFACTS/plan.md"
 
-[[ -s "$ARTIFACTS/plan.md" ]] || die "plan.md is empty — codex planning failed"
-echo "Plan saved to $ARTIFACTS/plan.md"
+  [[ -s "$ARTIFACTS/plan.md" ]] || die "plan.md is empty — codex planning failed"
+  echo "Plan saved to $ARTIFACTS/plan.md"
+fi
 
 # ── Step 4 — Implementation (Claude Code) ─────────────────────────────────────
 log "Step 4 — Implementation (Claude Code)"
