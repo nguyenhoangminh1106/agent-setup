@@ -73,6 +73,8 @@ codex_run() {
 if [[ -n "$BRANCH" && -s "$ARTIFACTS_ROOT/$BRANCH/spec.md" ]]; then
   ARTIFACTS="$ARTIFACTS_ROOT/$BRANCH"
   echo "Found existing spec at $ARTIFACTS/spec.md — skipping input and spec generation."
+elif [[ -n "$BRANCH" ]]; then
+  : # branch given but no spec yet — skip editor, let Step 1 generate spec
 elif [[ -z "$TICKET" ]]; then
   INPUT_FILE="$(mktemp /tmp/ticket-input.XXXXXX.md)"
 
