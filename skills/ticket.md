@@ -346,3 +346,25 @@ gh pr view --json url --jq .url 2>/dev/null || {
 ```
 
 Print the complete report.
+
+---
+
+### Step 9 — Worktree Cleanup (Claude Code)
+
+Print the progress banner then run:
+```
+════════════════════════════════════════
+▶ Step 9 — Worktree Cleanup  [tool: claude]
+   Removing local worktree directory (branch kept on remote)
+════════════════════════════════════════
+```
+```bash
+claude -p --output-format stream-json "/worktree-remove target=<branch> repo={{repo}}"
+```
+
+Do NOT pass `delete_branch=true` — the branch must be preserved on the remote. If the worktree has unexpected uncommitted changes: STOP and report, do not force.
+
+Print on success:
+```
+✓ Step 9 — Worktree Cleanup complete  (worktree removed, branch <branch> preserved on remote)
+```

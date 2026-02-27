@@ -326,3 +326,9 @@ gh pr view --json url --jq .url 2>/dev/null || {
   echo "${base}/compare/main...${branch}"
 }
 echo ""
+
+# ── Step 9 — Worktree Cleanup (Claude Code) ───────────────────────────────────
+log "Step 9 — Worktree Cleanup (Claude Code)"
+# Run from the repo root, not the worktree, since we're about to remove it
+(cd "$REPO" && claude --dangerously-skip-permissions -p "/worktree-remove target=$BRANCH repo=$REPO")
+echo "Worktree removed. Branch $BRANCH is preserved on the remote."

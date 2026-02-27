@@ -234,7 +234,8 @@ terminal (/ticket)
 │   └── claude "apply BLOCKER+FIX..."
 ├── claude "/clean-ai-comments"
 ├── claude "/commit-push"
-└── codex "final report..."        → printed to terminal + compare URL
+├── codex "final report..."        → printed to terminal + compare URL
+└── claude "/worktree-remove ..."  → local worktree removed, branch kept on remote
 ```
 
 ---
@@ -251,6 +252,7 @@ terminal (/ticket)
 | 6 | Cleanup | **Claude Code** via `/clean-ai-comments` | Removes noisy AI-generated comments added in this branch only. |
 | 7 | Commit | **Claude Code** via `/commit-push` | Commits with a Conventional Commits message tied to the ticket ID. Pushes. No `--no-verify`. |
 | 8 | Report | **Codex** drafts, terminal prints | Final report: Summary, Ticket alignment, Risk verdict, How to test (UI steps), Technical notes, GitHub compare URL. |
+| 9 | Cleanup | **Claude Code** via `/worktree-remove` | Removes the local worktree directory. Branch is preserved on the remote — nothing is deleted. |
 
 ---
 
@@ -285,6 +287,7 @@ Each tool reads from disk — never from a previous tool's in-memory state.
 * A clean branch with a single well-described commit
 * A GitHub compare URL ready to open as a PR
 * A structured report covering: what was done and why, how each acceptance criterion was met, the final risk verdict, step-by-step UI test instructions, and any deferred work or known limitations
+* A clean local workspace — the worktree is removed automatically, branch stays on the remote
 
 The human's only job is to read the report, test in the UI, and decide whether to merge.
 
