@@ -75,13 +75,11 @@ Anything unclear that a human must decide before implementation begins.
 
 **4) Save artifact**
 
-Write the spec to `.ticket/spec.md` (standalone usage):
+Derive the branch name (same as Step 6) and save to a branch-scoped folder so runs never overwrite each other:
 ```
-mkdir -p .ticket
+mkdir -p .ticket/<branch>
 ```
-Save the spec content to `.ticket/spec.md`.
-
-Note: when invoked via `ticket.sh`, the orchestrator moves this into `.ticket/<branch>/spec.md` automatically — each ticket gets its own folder so runs never overwrite each other.
+Save the spec content to `.ticket/<branch>/spec.md`.
 
 **5) Display**
 
@@ -97,7 +95,7 @@ Then print EXACTLY this block as the very last thing in your response, with the 
 
 ```
 ─────────────────────────────────────────────
-✅ Spec saved to .ticket/spec.md
+✅ Spec saved to .ticket/<derived-branch-name>/spec.md
 
 Run in your terminal to continue:
 

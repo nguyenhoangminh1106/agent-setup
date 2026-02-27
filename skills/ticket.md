@@ -52,7 +52,7 @@ claude "...prompt with artifact embedded..."
 
 Both are peers dispatched by this orchestrator. Neither is the "controller" of the other.
 
-**Artifacts** are saved to `.ticket/` between steps so each tool reads the exact output of the previous one:
+**Artifacts** are saved to `.ticket/<branch>/` between steps so each ticket run is isolated and runs never overwrite each other:
 - `spec.md` — output of the `spec` skill (Step 1)
 - `plan.md` — Codex planning output (Step 3)
 - `risk-1.md`, `risk-2.md`, `risk-3.md` — per-round risk review output (Step 5)
@@ -69,7 +69,7 @@ Each tool reads its input artifact from disk and writes its output artifact to d
 codex "/spec {{ticket}}"
 ```
 
-Output is saved to `.ticket/spec.md` by the `spec` skill.
+Output is saved to `.ticket/<branch>/spec.md` by the `spec` skill.
 
 ---
 
@@ -89,7 +89,7 @@ Do not continue until the worktree path is confirmed and the working directory i
 
 ### Step 3 — Plan (Codex)
 
-Read `.ticket/spec.md` into `$SPEC`.
+Read `.ticket/<branch>/spec.md` into `$SPEC`.
 
 ```bash
 codex "You are a software planner. Produce a minimal-diff Execution Plan.
@@ -130,13 +130,13 @@ Priorities (strict order):
 5. Acceptable code quality"
 ```
 
-Save output to `.ticket/plan.md`.
+Save output to `.ticket/<branch>/plan.md`.
 
 ---
 
 ### Step 4 — Implementation (Claude Code)
 
-Read `.ticket/plan.md` into `$PLAN`.
+Read `.ticket/<branch>/plan.md` into `$PLAN`.
 
 ```bash
 claude "Execute this plan inside the current worktree. Match existing code style and patterns. No new dependencies or abstractions unless the spec requires them. Do not touch files outside the plan.
@@ -160,7 +160,7 @@ Run up to 3 rounds. Each round uses a freshly captured diff — never reuse a di
 **5a) Capture fresh diff**
 ```bash
 git fetch origin
-git diff origin/main...HEAD > .ticket/diff-current.md
+git diff origin/main...HEAD > .ticket/<branch>/diff-current.md
 ```
 If the diff is empty: STOP and report — no changes on branch.
 
@@ -168,8 +168,8 @@ If the diff is empty: STOP and report — no changes on branch.
 
 Read all artifacts fresh from disk:
 ```bash
-SPEC=$(cat .ticket/spec.md)
-DIFF=$(cat .ticket/diff-current.md)
+SPEC=$(cat .ticket/<branch>/spec.md)
+DIFF=$(cat .ticket/<branch>/diff-current.md)
 ```
 
 ```bash
@@ -198,7 +198,7 @@ Explicitly check:
 - Hidden data risk: any writes, deletes, or transforms on existing data rows?"
 ```
 
-Save output to `.ticket/risk-<N>.md`.
+Save output to `.ticket/<branch>/risk-<N>.md`.
 
 **5c) Claude Code applies fixes**
 ```bash
@@ -206,7 +206,7 @@ claude "Apply only the BLOCKER and FIX items from the risk review below. Minimal
 
 RISK REVIEW:
 ---
-$(cat .ticket/risk-<N>.md)
+$(cat .ticket/<branch>/risk-<N>.md)
 ---"
 ```
 
@@ -236,11 +236,11 @@ Commit message must follow Conventional Commits and include the ticket identifie
 
 Read all artifacts:
 ```bash
-SPEC=$(cat .ticket/spec.md)
-PLAN=$(cat .ticket/plan.md)
-RISK1=$(cat .ticket/risk-1.md 2>/dev/null)
-RISK2=$(cat .ticket/risk-2.md 2>/dev/null)
-RISK3=$(cat .ticket/risk-3.md 2>/dev/null)
+SPEC=$(cat .ticket/<branch>/spec.md)
+PLAN=$(cat .ticket/<branch>/plan.md)
+RISK1=$(cat .ticket/<branch>/risk-1.md 2>/dev/null)
+RISK2=$(cat .ticket/<branch>/risk-2.md 2>/dev/null)
+RISK3=$(cat .ticket/<branch>/risk-3.md 2>/dev/null)
 ```
 
 ```bash
