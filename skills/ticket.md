@@ -65,6 +65,12 @@ Each tool reads its input artifact from disk and writes its output artifact to d
 
 ### Step 1 — Spec (spec skill via Codex)
 
+**Auto-skip check:** If `.ticket/<branch>/spec.md` already exists and `{{branch}}` was provided, skip this step entirely and print:
+```
+Step 1 — Spec: skipped (using existing .ticket/<branch>/spec.md)
+```
+
+Otherwise:
 ```bash
 codex "/spec {{ticket}}"
 ```
@@ -80,7 +86,7 @@ Determine branch name:
 - Else: derive from the spec Goal line — kebab-case, prefixed `feat/`, `fix/`, or `chore/`.
 
 ```bash
-claude "/worktree-create branch=<branch> repo={{repo}}"
+claude "/worktree-create branch=<branch> repo={{repo}} yes=true"
 ```
 
 Do not continue until the worktree path is confirmed and the working directory is inside it.
@@ -89,7 +95,12 @@ Do not continue until the worktree path is confirmed and the working directory i
 
 ### Step 3 — Plan (Codex)
 
-Read `.ticket/<branch>/spec.md` into `$SPEC`.
+**Auto-skip check:** If `.ticket/<branch>/plan.md` already exists, skip this step entirely and print:
+```
+Step 3 — Plan: skipped (using existing .ticket/<branch>/plan.md)
+```
+
+Otherwise, read `.ticket/<branch>/spec.md` into `$SPEC`.
 
 ```bash
 codex "You are a software planner. Produce a minimal-diff Execution Plan.
