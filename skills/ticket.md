@@ -43,14 +43,39 @@ You are a top-level orchestrator running in the terminal at the repo root. You a
 This skill runs from the terminal at the repo root — not inside either tool. Each step is a subprocess call:
 
 ```bash
-# Codex steps:
-codex "...prompt with artifact embedded..."
+# Codex steps — use `exec` subcommand for non-interactive streaming output:
+codex exec "...prompt..."
 
-# Claude Code steps:
-claude "...prompt with artifact embedded..."
+# Claude Code steps — use -p --output-format stream-json for live token streaming:
+claude -p --output-format stream-json "...prompt..."
 ```
 
 Both are peers dispatched by this orchestrator. Neither is the "controller" of the other.
+
+**Progress visibility — mandatory before every step:**
+
+Before invoking any subprocess, print a progress banner to the terminal so the user always knows what is running:
+
+```
+════════════════════════════════════════
+▶ Step <N> — <Step Name>  [tool: codex | claude]
+   <one-line description of what this step will do>
+════════════════════════════════════════
+```
+
+After the subprocess exits, print a completion line:
+
+```
+✓ Step <N> — <Step Name> complete  (artifact: .ticket/<branch>/<file> if applicable)
+```
+
+If the subprocess exits non-zero, print:
+```
+✗ Step <N> FAILED — exit code <N>. Stopping.
+```
+…and halt immediately.
+
+**Subprocess output:** Both `codex` and `claude` stream their output directly to the terminal (do not suppress or redirect to /dev/null). The user sees live output from each tool as it runs.
 
 **Artifacts** are saved to `.ticket/<branch>/` between steps so each ticket run is isolated and runs never overwrite each other:
 - `spec.md` — output of the `spec` skill (Step 1)
@@ -72,9 +97,15 @@ Each tool reads its input artifact from disk and writes its output artifact to d
 Step 1 — Spec: skipped (using existing .ticket/<branch>/spec.md)
 ```
 
-Otherwise:
+Otherwise, print the progress banner then run:
+```
+════════════════════════════════════════
+▶ Step 1 — Spec  [tool: codex]
+   Generating requirement spec from ticket input
+════════════════════════════════════════
+```
 ```bash
-codex "/spec {{ticket}}"
+codex exec "/spec {{ticket}}"
 ```
 
 Output is saved to `.ticket/<branch>/spec.md` by the `spec` skill.
@@ -87,8 +118,15 @@ Determine branch name:
 - If `{{branch}}` provided: use it.
 - Else: derive from the spec Goal line — kebab-case, prefixed `feat/`, `fix/`, or `chore/`.
 
+Print the progress banner then run:
+```
+════════════════════════════════════════
+▶ Step 2 — Worktree  [tool: claude]
+   Creating isolated git worktree for branch: <branch>
+════════════════════════════════════════
+```
 ```bash
-claude "/worktree-create branch=<branch> repo={{repo}} yes=true"
+claude -p --output-format stream-json "/worktree-create branch=<branch> repo={{repo}} yes=true"
 ```
 
 Do not continue until the worktree path is confirmed and the working directory is inside it.
@@ -102,10 +140,15 @@ Do not continue until the worktree path is confirmed and the working directory i
 Step 3 — Plan: skipped (using existing .ticket/<branch>/plan.md)
 ```
 
-Otherwise:
-
+Otherwise, print the progress banner then run:
+```
+════════════════════════════════════════
+▶ Step 3 — Plan  [tool: codex]
+   Producing minimal-diff execution plan from spec
+════════════════════════════════════════
+```
 ```bash
-codex "You are a software planner. Produce a minimal-diff Execution Plan.
+codex exec "You are a software planner. Produce a minimal-diff Execution Plan.
 
 Read the spec from disk: .ticket/<branch>/spec.md
 
@@ -146,8 +189,15 @@ Save output to `.ticket/<branch>/plan.md`.
 
 ### Step 4 — Implementation (Claude Code)
 
+Print the progress banner then run:
+```
+════════════════════════════════════════
+▶ Step 4 — Implementation  [tool: claude]
+   Executing plan — writing code changes in worktree
+════════════════════════════════════════
+```
 ```bash
-claude "Execute this plan inside the current worktree. Match existing code style and patterns. No new dependencies or abstractions unless the spec requires them. Do not touch files outside the plan.
+claude -p --output-format stream-json "Execute this plan inside the current worktree. Match existing code style and patterns. No new dependencies or abstractions unless the spec requires them. Do not touch files outside the plan.
 
 Safety: no force push, no DROP/DELETE/ALTER TABLE/migrations, no changes to main or master. If any guard fires: STOP and report.
 
@@ -163,6 +213,14 @@ Run up to 3 rounds. Each round uses a freshly captured diff — never reuse a di
 **Each round:**
 
 **5a) Capture fresh diff**
+
+Print:
+```
+════════════════════════════════════════
+▶ Step 5a — Diff capture  [tool: bash]  (round <N>/3)
+   Fetching origin and diffing branch against main
+════════════════════════════════════════
+```
 ```bash
 git fetch origin
 git diff origin/main...HEAD > .ticket/<branch>/diff-current.md
@@ -171,8 +229,15 @@ If the diff is empty: STOP and report — no changes on branch.
 
 **5b) Codex reviews**
 
+Print:
+```
+════════════════════════════════════════
+▶ Step 5b — Risk review  [tool: codex]  (round <N>/3)
+   Reviewing diff for blockers, regressions, and scope drift
+════════════════════════════════════════
+```
 ```bash
-codex "You are a code risk reviewer. Review the diff against the spec.
+codex exec "You are a code risk reviewer. Review the diff against the spec.
 
 Read both artifacts fresh from disk:
 - Spec: .ticket/<branch>/spec.md
@@ -194,8 +259,16 @@ Explicitly check:
 Save output to `.ticket/<branch>/risk-<N>.md`.
 
 **5c) Claude Code applies fixes**
+
+Print:
+```
+════════════════════════════════════════
+▶ Step 5c — Fix application  [tool: claude]  (round <N>/3)
+   Applying BLOCKER and FIX items from risk review
+════════════════════════════════════════
+```
 ```bash
-claude "Apply only the BLOCKER and FIX items from the risk review. Minimal diffs only. No refactors. Ignore NOTE items.
+claude -p --output-format stream-json "Apply only the BLOCKER and FIX items from the risk review. Minimal diffs only. No refactors. Ignore NOTE items.
 
 Read the risk review from disk: .ticket/<branch>/risk-<N>.md"
 ```
@@ -206,16 +279,30 @@ Exit the loop early if no BLOCKER or FIX items remain. After round 3, if BLOCKER
 
 ### Step 6 — AI Comment Cleanup (Claude Code)
 
+Print the progress banner then run:
+```
+════════════════════════════════════════
+▶ Step 6 — AI Comment Cleanup  [tool: claude]
+   Removing noisy AI-generated comments from diff
+════════════════════════════════════════
+```
 ```bash
-claude "/clean-ai-comments"
+claude -p --output-format stream-json "/clean-ai-comments"
 ```
 
 ---
 
 ### Step 7 — Commit and Push (Claude Code)
 
+Print the progress banner then run:
+```
+════════════════════════════════════════
+▶ Step 7 — Commit and Push  [tool: claude]
+   Creating conventional commit and pushing branch
+════════════════════════════════════════
+```
 ```bash
-claude "/commit-push"
+claude -p --output-format stream-json "/commit-push"
 ```
 
 Commit message must follow Conventional Commits and include the ticket identifier if available (e.g. `feat: add login page (#42)`). No `--no-verify`. If a hook fails: fix minimally, retry once. If it fails again: STOP and report.
@@ -224,8 +311,15 @@ Commit message must follow Conventional Commits and include the ticket identifie
 
 ### Step 8 — Final Report (Codex drafts, terminal publishes)
 
+Print the progress banner then run:
+```
+════════════════════════════════════════
+▶ Step 8 — Final Report  [tool: codex]
+   Synthesizing delivery report from all artifacts
+════════════════════════════════════════
+```
 ```bash
-codex "Produce a final delivery report.
+codex exec "Produce a final delivery report.
 
 Read all artifacts from disk:
 - Spec: .ticket/<branch>/spec.md
