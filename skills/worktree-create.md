@@ -7,6 +7,8 @@ arguments:
     description: "Desired branch name. If omitted, infer from chat context and auto-generate a kebab-case name."
   - name: base
     description: "Optional base ref if creating a new branch (default: origin/main if exists, else main, else HEAD)."
+  - name: yes
+    description: "If 'true', skip the confirmation prompt and proceed automatically. Use when called non-interactively (e.g. from ticket.sh)."
 ---
 
 ## Task
@@ -63,12 +65,13 @@ git show-ref --verify --quiet refs/remotes/origin/<branch>  # REMOTE_BRANCH=1/0
 
 For case D, base ref = `{{base}}` if provided, else `origin/main` if exists, else `main`, else `HEAD`.
 
-**6) Single confirmation prompt**
+**6) Confirmation**
 Print a one-line summary:
 ```
 Branch: <branch> (<new|local|remote>) → <BASE>/<branch>
 ```
-Ask: "Create this worktree? (yes/no)" — only proceed on explicit "yes".
+- If `{{yes}}` is `true`: skip the prompt and proceed automatically.
+- Otherwise: ask "Create this worktree? (yes/no)" — only proceed on explicit "yes".
 
 **7) Execute**
 ```
