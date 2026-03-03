@@ -59,11 +59,9 @@ If the user provides access (or `{{db}}` is already set), proceed to step 4b. Ot
 
 **4b) Query the DB for test data**
 
-Run read-only queries to find concrete, realistic values a tester can use. Never run INSERT, UPDATE, DELETE, DROP, or any mutation.
-
-Focus on:
-- Example IDs or records in the states touched by this diff (e.g. a request in `pending` state, a user with role `admin`)
-- Edge-case records that match boundary conditions in the code (e.g. an expired record, a record with a null field that is now handled)
+Use the `/query-db` skill to find concrete, realistic values a tester can use. Pass the DB connection from `{{db}}` and ask plain-English questions derived from the diff. Focus on:
+- Example IDs or records in the states touched by this diff (e.g. "find a request in pending state")
+- Edge-case records that match boundary conditions in the code (e.g. "find an expired record", "find a record where <field> is null")
 - Any enum values, status codes, or categories referenced in the changed code
 
 Collect these values — you will embed them directly in the testing steps.

@@ -25,6 +25,7 @@ SKILLS=(
   "spec"
   "feature-summary"
   "testing-instructions"
+  "query-db"
 )
 
 # Download then install each skill

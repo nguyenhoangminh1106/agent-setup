@@ -80,7 +80,7 @@ Invoke the `/testing-instructions` skill, passing:
 - `branch=<branch>` (the branch identified in step 1)
 - `db={{db}}` (pass through as-is — `skip`, a connection string, or omit to let the skill ask)
 
-The skill will read the diff, prompt for DB access if relevant, query for real example data, and return complete step-by-step testing instructions. Use its output verbatim for the **🧪 How to Test in the UI** and **⚠️ Testing gaps / unknowns** sections below.
+The skill will read the diff, prompt for DB access if relevant, use `/query-db` to fetch real example data, and return complete step-by-step testing instructions. Use its output verbatim for the **🧪 How to Test in the UI** and **⚠️ Testing gaps / unknowns** sections below.
 
 **7) Produce the report** (see Output Format below)
 
