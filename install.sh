@@ -23,6 +23,7 @@ SKILLS=(
   "clean-ai-comments"
   "ticket"
   "spec"
+  "feature-summary"
 )
 
 # Download then install each skill
