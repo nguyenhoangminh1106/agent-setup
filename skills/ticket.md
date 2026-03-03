@@ -25,7 +25,7 @@ You are a top-level orchestrator running in the terminal at the repo root. You a
 | 5b. Fix iterations | **Claude Code** | Controlled corrective edits |
 | 6. AI comment cleanup | **Claude Code** | Comment-only edits |
 | 7. Commit and push | **Claude Code** | Repo-safe execution |
-| 8. Final report | **Codex CLI** (draft) + **Claude Code** (publish) | Codex synthesizes, Claude appends compare URL |
+| 8. Final report | **Claude Code** (feature-summary skill) | Summarizes changes, business purpose, and UI testing steps using spec as context |
 
 ## Rules
 
@@ -309,34 +309,25 @@ Commit message must follow Conventional Commits and include the ticket identifie
 
 ---
 
-### Step 8 — Final Report (Codex drafts, terminal publishes)
+### Step 8 — Final Report (Claude Code via feature-summary skill)
 
 Print the progress banner then run:
 ```
 ════════════════════════════════════════
-▶ Step 8 — Final Report  [tool: codex]
-   Synthesizing delivery report from all artifacts
+▶ Step 8 — Final Report  [tool: claude]
+   Summarizing changes, business purpose, and UI testing instructions
 ════════════════════════════════════════
 ```
 ```bash
-codex exec "Produce a final delivery report.
+claude -p --output-format stream-json "/feature-summary target=<branch>
 
-Read all artifacts from disk:
-- Spec: .ticket/<branch>/spec.md
-- Plan: .ticket/<branch>/plan.md
-- Risk review 1 (if exists): .ticket/<branch>/risk-1.md
-- Risk review 2 (if exists): .ticket/<branch>/risk-2.md
-- Risk review 3 (if exists): .ticket/<branch>/risk-3.md
-
-Sections:
-## A) Summary — what was done, what was intentionally left out
-## B) Ticket alignment — map each acceptance criterion to the change that satisfies it; flag any unaddressed
-## C) Risk assessment — final level LOW/MEDIUM/HIGH; safe to merge? YES / YES WITH CAUTION / NO
-## D) How to test — step-by-step UI instructions; expected results; edge cases
-## E) Technical notes — files changed, assumptions, deferred work"
+Use the spec at .ticket/<branch>/spec.md as context when interpreting the
+business purpose of the changes and when writing the testing instructions.
+Map each acceptance criterion in the spec to the corresponding test step.
+Do not ask about DB access — skip DB queries for this automated run."
 ```
 
-Append the compare URL:
+After the skill output, append the compare URL:
 ```bash
 gh pr view --json url --jq .url 2>/dev/null || {
   base=$(git remote get-url origin | sed 's/\.git$//')
@@ -344,8 +335,6 @@ gh pr view --json url --jq .url 2>/dev/null || {
   echo "${base}/compare/main...${branch}"
 }
 ```
-
-Print the complete report.
 
 ---
 
