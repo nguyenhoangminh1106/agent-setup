@@ -161,14 +161,9 @@ if [[ -s "$ARTIFACTS/plan.md" ]]; then
 else
   step 3 "Plan (Codex)"
 
-  SPEC=$(cat "$ARTIFACTS/spec.md")
-
   codex_run "You are a software planner. Produce a minimal-diff Execution Plan.
 
-SPEC:
----
-$SPEC
----
+Read the spec from disk: $ARTIFACTS/spec.md
 
 Output format:
 
@@ -206,16 +201,11 @@ fi
 # ── Step 4 — Implementation (Claude Code) ─────────────────────────────────────
 step 4 "Implementation (Claude Code)"
 
-PLAN=$(cat "$ARTIFACTS/plan.md")
-
 claude_run "Execute this plan inside the current worktree. Match existing code style and patterns. No new dependencies or abstractions unless the spec requires them. Do not touch files outside the plan.
 
 Safety: no force push, no DROP/DELETE/ALTER TABLE/migrations, no changes to main or master. If any guard fires: STOP and report.
 
-PLAN:
----
-$PLAN
----"
+Read the plan from disk: $ARTIFACTS/plan.md"
 
 # ── Step 5 — Risk Review Loop (Codex reviews, Claude fixes) ───────────────────
 step 5 "Risk Review Loop"
@@ -234,20 +224,11 @@ for ROUND in 1 2 3; do
   fi
 
   # 5b: Codex reviews
-  SPEC=$(cat "$ARTIFACTS/spec.md")
-  DIFF=$(cat "$ARTIFACTS/diff-current.md")
-
   codex_run "You are a code risk reviewer. Review the diff against the spec.
 
-SPEC:
----
-$SPEC
----
-
-DIFF (current branch state, captured just now):
----
-$DIFF
----
+Read both artifacts fresh from disk:
+- Spec: $ARTIFACTS/spec.md
+- Diff: $ARTIFACTS/diff-current.md
 
 Run the branch-risk-review skill. Classify each finding:
 - BLOCKER: must fix (regression, out-of-scope change, HIGH risk)
@@ -257,7 +238,7 @@ Run the branch-risk-review skill. Classify each finding:
 Explicitly check:
 - Scope drift: anything touched that the spec did not ask for?
 - Diff size: any unnecessary files or lines changed?
-- DB/schema changes (skip *.sql and migrations/ — humans write those): any ORM model or schema change not strictly required? → BLOCKER.
+- DB/schema changes (skip *.sql and migrations/ — humans write those): any ORM model or schema change not strictly required? → BLOCKER if so.
 - Intent loss: does the implementation still match the spec goals?
 - Hidden data risk: any writes, deletes, or transforms on existing data rows?" > "$ARTIFACTS/risk-${ROUND}.md"
 
@@ -270,14 +251,9 @@ Explicitly check:
   fi
 
   # 5c: Claude applies fixes
-  RISK=$(cat "$ARTIFACTS/risk-${ROUND}.md")
+  claude_run "Apply only the BLOCKER and FIX items from the risk review. Minimal diffs only. No refactors. Ignore NOTE items.
 
-  claude_run "Apply only the BLOCKER and FIX items from the risk review below. Minimal diffs only. No refactors. Ignore NOTE items.
-
-RISK REVIEW:
----
-$RISK
----"
+Read the risk review from disk: $ARTIFACTS/risk-${ROUND}.md"
 
   if [[ "$ROUND" -eq 3 ]]; then
     if grep -qiE "^-?\s*BLOCKER:" "$ARTIFACTS/risk-${ROUND}.md"; then
@@ -294,34 +270,10 @@ claude_run "/clean-ai-comments"
 step 7 "Commit and Push (Claude Code)"
 claude_run "/commit-push"
 
-# ── Step 8 — Final Report (Codex drafts) ──────────────────────────────────────
-step 8 "Final Report (Codex)"
+# ── Step 8 — Final Report (Claude Code via feature-summary skill) ──────────────
+step 8 "Final Report (Claude Code)"
 
-SPEC=$(cat "$ARTIFACTS/spec.md")
-PLAN=$(cat "$ARTIFACTS/plan.md")
-RISK1=$(cat "$ARTIFACTS/risk-1.md" 2>/dev/null || echo "")
-RISK2=$(cat "$ARTIFACTS/risk-2.md" 2>/dev/null || echo "")
-RISK3=$(cat "$ARTIFACTS/risk-3.md" 2>/dev/null || echo "")
-
-codex_run "Produce a final delivery report.
-
-SPEC:
-$SPEC
-
-PLAN:
-$PLAN
-
-RISK REVIEWS:
-$RISK1
-$RISK2
-$RISK3
-
-Sections:
-## A) Summary — what was done, what was intentionally left out
-## B) Ticket alignment — map each acceptance criterion to the change that satisfies it; flag any unaddressed
-## C) Risk assessment — final level LOW/MEDIUM/HIGH; safe to merge? YES / YES WITH CAUTION / NO
-## D) How to test — step-by-step UI instructions; expected results; edge cases
-## E) Technical notes — files changed, assumptions, deferred work"
+claude_run "/feature-summary target=$BRANCH spec=$ARTIFACTS/spec.md db=skip"
 
 echo ""
 echo "── Compare URL ──────────────────────────────────────────"
