@@ -1,5 +1,5 @@
 ---
-description: "Read-only PR triage. Auto reply+resolve ONLY for bot threads (STYLE/FALSE-ALARM). Human threads: report only."
+description: "Read-only PR triage. Auto reply+resolve bot threads (STYLE/FALSE-ALARM/low-risk, or already fixed locally). Human threads: report only."
 arguments:
   - name: pr
     description: "PR number or URL (e.g. 123 or https://github.com/org/repo/pull/123)"
@@ -13,8 +13,8 @@ Triage all unresolved review threads on a pull request. Classify each as CRITICA
 
 - DO NOT edit, write, or modify any code files.
 - DO NOT checkout branches, commit, or run tools that change repo state.
-- You MAY reply+resolve ONLY for BOT threads when verdict is STYLE, FALSE-ALARM, or NONCRITICAL with ~Low / ~Very Low likelihood.
-- For HUMAN feedback: NEVER reply, NEVER resolve (report only).
+- You MAY reply+resolve BOT threads when: verdict is STYLE, FALSE-ALARM, or NONCRITICAL with ~Low / ~Very Low likelihood — OR when the concern is already addressed in local/uncommitted changes.
+- For HUMAN feedback: NEVER reply, NEVER resolve (report only, even if already fixed locally).
 - If unsure whether bot vs human: treat as HUMAN.
 
 ## Definitions
@@ -78,21 +78,33 @@ query($owner:String!, $name:String!, $number:Int!) {
 }' -f owner=... -f name=... -F number=...
 ```
 
-**3) Classify each thread** using the severity levels and decision rules below.
+**3) Check local changes** — for any thread pointing to a specific file/path, check if the concern is already addressed in uncommitted work:
+```
+git diff          # unstaged changes
+git diff --cached # staged changes
+git status        # new/deleted files
+```
+Mark each bot thread as `FIXED_LOCALLY` if the diff clearly resolves the flagged issue.
 
-**4) Act** per the decision rules.
+**4) Classify each thread** using the severity levels and decision rules below.
+
+**5) Act** per the decision rules.
 
 ## Decision Rules
 
-| Verdict | Likelihood | Author | Action |
-|---|---|---|---|
-| CRITICAL | ~High or ~Medium | Any | Report + fix plan. Do NOT reply or resolve. |
-| CRITICAL | ~Low or ~Very Low | Any | Downgrade to NONCRITICAL (unless catastrophic). |
-| NONCRITICAL | ~High or ~Medium | Any | Report only. |
-| NONCRITICAL | ~Low or ~Very Low | Bot | Reply + resolve. |
-| NONCRITICAL | ~Low or ~Very Low | Human | Report only. |
-| STYLE / FALSE-ALARM | — | Bot | Reply + resolve. |
-| STYLE / FALSE-ALARM | — | Human | Report only. |
+| Verdict | Likelihood | Fixed Locally | Author | Action |
+|---|---|---|---|---|
+| CRITICAL | ~High or ~Medium | No | Any | Report + fix plan. Do NOT reply or resolve. |
+| CRITICAL | ~High or ~Medium | Yes | Bot | Reply (note fix is in local changes) + resolve. |
+| CRITICAL | ~High or ~Medium | Yes | Human | Report only (note fix is in local changes). |
+| CRITICAL | ~Low or ~Very Low | Any | Any | Downgrade to NONCRITICAL (unless catastrophic). |
+| NONCRITICAL | ~High or ~Medium | No | Any | Report only. |
+| NONCRITICAL | ~High or ~Medium | Yes | Bot | Reply (note fix is in local changes) + resolve. |
+| NONCRITICAL | ~High or ~Medium | Yes | Human | Report only (note fix is in local changes). |
+| NONCRITICAL | ~Low or ~Very Low | Any | Bot | Reply + resolve. |
+| NONCRITICAL | ~Low or ~Very Low | Any | Human | Report only. |
+| STYLE / FALSE-ALARM | — | Any | Bot | Reply + resolve. |
+| STYLE / FALSE-ALARM | — | Any | Human | Report only. |
 
 **Bot reply guidelines:**
 - 1–3 sentences max, professional and factual.
@@ -106,7 +118,7 @@ query($owner:String!, $name:String!, $number:Int!) {
 **A) PR summary**
 
 **B) Triage table** (all unresolved threads, before any actions)
-- Thread ID | Author | Bot/Human | File/location | Claim summary | Verdict | Likelihood | Business context | Recommended action | Rationale
+- Thread ID | Author | Bot/Human | File/location | Claim summary | Verdict | Likelihood | Fixed Locally | Business context | Recommended action | Rationale
 
 **C) Bot replies posted** (if any)
 - Thread ID → exact reply text
