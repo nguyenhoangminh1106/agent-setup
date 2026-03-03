@@ -74,16 +74,13 @@ For each changed file, read enough of the file to understand:
 
 Focus on understanding — do not flag issues or risks (that is branch-risk-review's job).
 
-**6) Identify whether DB context would help**
+**6) Generate UI testing instructions**
 
-If `{{db}}` is `skip`: skip this step entirely.
+Invoke the `/testing-instructions` skill, passing:
+- `branch=<branch>` (the branch identified in step 1)
+- `db={{db}}` (pass through as-is — `skip`, a connection string, or omit to let the skill ask)
 
-If the diff touches DB models, queries, seed data, or API responses that depend on DB state, and `{{db}}` was NOT provided:
-
-> Ask the user:
-> "The changes touch database logic. Do you have a DB connection or tool I can query to give better testing instructions? (e.g. psql connection string, Prisma Studio URL, or just tell me to skip)"
-
-If the user provides access (or `{{db}}` is a connection string/tool name), run targeted read-only queries to understand the relevant data shape. Never run INSERT, UPDATE, DELETE, or DROP.
+The skill will read the diff, prompt for DB access if relevant, query for real example data, and return complete step-by-step testing instructions. Use its output verbatim for the **🧪 How to Test in the UI** and **⚠️ Testing gaps / unknowns** sections below.
 
 **7) Produce the report** (see Output Format below)
 

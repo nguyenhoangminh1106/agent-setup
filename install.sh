@@ -24,6 +24,7 @@ SKILLS=(
   "ticket"
   "spec"
   "feature-summary"
+  "testing-instructions"
 )
 
 # Download then install each skill
