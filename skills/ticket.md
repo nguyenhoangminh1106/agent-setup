@@ -223,7 +223,7 @@ Print:
 ```
 ```bash
 git fetch origin
-git diff origin/main...HEAD > .ticket/<branch>/diff-current.md
+git diff origin/main...<branch> > .ticket/<branch>/diff-current.md
 ```
 If the diff is empty: STOP and report — no changes on branch.
 
