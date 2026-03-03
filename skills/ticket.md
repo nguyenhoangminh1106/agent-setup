@@ -319,12 +319,7 @@ Print the progress banner then run:
 ════════════════════════════════════════
 ```
 ```bash
-claude -p --output-format stream-json "/feature-summary target=<branch>
-
-Use the spec at .ticket/<branch>/spec.md as context when interpreting the
-business purpose of the changes and when writing the testing instructions.
-Map each acceptance criterion in the spec to the corresponding test step.
-Do not ask about DB access — skip DB queries for this automated run."
+claude -p --output-format stream-json "/feature-summary target=<branch> spec=.ticket/<branch>/spec.md db=skip"
 ```
 
 After the skill output, append the compare URL:
