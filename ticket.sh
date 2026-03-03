@@ -35,7 +35,9 @@ ARTIFACTS_ROOT="$REPO/.ticket"
 mkdir -p "$ARTIFACTS_ROOT"
 
 log()  { echo ""; echo "▶ $*"; echo ""; }
-die()  { echo ""; echo "ERROR: $*" >&2; exit 1; }
+die()  { echo "[STATUS:failed] $*" >&2; echo ""; echo "ERROR: $*" >&2; exit 1; }
+# step N "desc" — emits [STEP:N] prefix for dashboard parsing then calls log()
+step() { local n="$1"; shift; echo "[STEP:${n}] $*"; log "Step ${n} — $*"; }
 
 require() {
   command -v "$1" &>/dev/null || die "'$1' is not installed or not in PATH"
@@ -109,7 +111,7 @@ fi
 # ── Step 1 — Spec (Codex via /spec skill) ─────────────────────────────────────
 # Auto-skip if spec already exists for this branch (ARTIFACTS already set above).
 if [[ -z "${ARTIFACTS:-}" ]]; then
-  log "Step 1 — Spec (Codex)"
+  step 1 "Spec (Codex)"
   SPEC_TMP="$ARTIFACTS_ROOT/.spec-tmp.md"
   codex_run "/spec $TICKET" > "$SPEC_TMP"
   [[ -s "$SPEC_TMP" ]] || die "spec output is empty — codex /spec failed"
@@ -127,9 +129,11 @@ if [[ -z "${ARTIFACTS:-}" ]]; then
 else
   echo "Step 1 — Spec: skipped (using existing $ARTIFACTS/spec.md)"
 fi
+# Emit branch name for dashboard display
+echo "[BRANCH:${BRANCH}]"
 
 # ── Step 2 — Worktree (Claude Code) ───────────────────────────────────────────
-log "Step 2 — Worktree (Claude Code)"
+step 2 "Worktree (Claude Code)"
 
 echo "Branch: $BRANCH"
 claude_run "/worktree-create branch=$BRANCH repo=$REPO yes=true"
@@ -153,9 +157,9 @@ cd "$WORKTREE"
 # ── Step 3 — Plan (Codex) ─────────────────────────────────────────────────────
 # Auto-skip if plan already exists for this branch.
 if [[ -s "$ARTIFACTS/plan.md" ]]; then
-  echo "Step 3 — Plan: skipped (using existing $ARTIFACTS/plan.md)"
+  echo "[STEP:3] Plan: skipped (using existing $ARTIFACTS/plan.md)"
 else
-  log "Step 3 — Plan (Codex)"
+  step 3 "Plan (Codex)"
 
   SPEC=$(cat "$ARTIFACTS/spec.md")
 
@@ -200,7 +204,7 @@ Priorities (strict order):
 fi
 
 # ── Step 4 — Implementation (Claude Code) ─────────────────────────────────────
-log "Step 4 — Implementation (Claude Code)"
+step 4 "Implementation (Claude Code)"
 
 PLAN=$(cat "$ARTIFACTS/plan.md")
 
@@ -214,9 +218,10 @@ $PLAN
 ---"
 
 # ── Step 5 — Risk Review Loop (Codex reviews, Claude fixes) ───────────────────
-log "Step 5 — Risk Review Loop"
+step 5 "Risk Review Loop"
 
 for ROUND in 1 2 3; do
+  echo "[STEP:5] Risk review round ${ROUND}/3"
   log "  Risk review round $ROUND / 3"
 
   # 5a: fresh diff (shell is cd'd into worktree, so git runs in the right branch)
@@ -282,15 +287,15 @@ $RISK
 done
 
 # ── Step 6 — AI Comment Cleanup (Claude Code) ─────────────────────────────────
-log "Step 6 — AI Comment Cleanup (Claude Code)"
+step 6 "AI Comment Cleanup (Claude Code)"
 claude_run "/clean-ai-comments"
 
 # ── Step 7 — Commit and Push (Claude Code) ────────────────────────────────────
-log "Step 7 — Commit and Push (Claude Code)"
+step 7 "Commit and Push (Claude Code)"
 claude_run "/commit-push"
 
 # ── Step 8 — Final Report (Codex drafts) ──────────────────────────────────────
-log "Step 8 — Final Report (Codex)"
+step 8 "Final Report (Codex)"
 
 SPEC=$(cat "$ARTIFACTS/spec.md")
 PLAN=$(cat "$ARTIFACTS/plan.md")
@@ -328,7 +333,8 @@ gh pr view --json url --jq .url 2>/dev/null || {
 echo ""
 
 # ── Step 9 — Worktree Cleanup (Claude Code) ───────────────────────────────────
-log "Step 9 — Worktree Cleanup (Claude Code)"
+step 9 "Worktree Cleanup (Claude Code)"
 # Run from the repo root, not the worktree, since we're about to remove it
 (cd "$REPO" && claude --dangerously-skip-permissions -p "/worktree-remove target=$BRANCH repo=$REPO")
 echo "Worktree removed. Branch $BRANCH is preserved on the remote."
+echo "[STATUS:completed]"
