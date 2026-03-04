@@ -68,6 +68,15 @@ Collect these values — you will embed them directly in the testing steps.
 
 **5) Write the testing instructions**
 
+CRITICAL RULE: If DB was queried in step 4b, every pre-condition and step MUST use the exact real values returned — no placeholders, no "find a user with X role", no "navigate to a record". Tell the tester exactly:
+- Which user/email to log in as (e.g. "log in as `alice@example.com`")
+- Which company, org, or tenant to use by name (e.g. "switch to company **Acme Corp**")
+- Which URL to navigate to with the real ID in the path (e.g. `https://app.example.com/requests/abc-123`)
+- Which record to click on by its real name or ID
+- What exact values to enter in forms if testing specific states
+
+Never make the tester choose or search. If you have DB access, the tester should be able to follow the steps blindly.
+
 For each distinct feature or fix in the diff, produce a block:
 
 ---
@@ -75,12 +84,13 @@ For each distinct feature or fix in the diff, produce a block:
 **[Feature or fix name]**
 
 Pre-conditions:
-- (setup needed: logged-in user, specific role, existing DB record, etc.)
-- If DB was queried: name the specific record to use (e.g. "use Request ID `abc-123` which is in `pending` state")
+- Log in as: `<exact email from DB>` (role: `<role>`)
+- Company / tenant: `<exact name from DB>` (if applicable)
+- Record to use: `<exact ID or name from DB>` — `<its current state>`
 
 Steps:
-1. Go to `<page or URL>`
-2. Click / fill in / select `<element>`
+1. Go to `<full URL with real IDs, e.g. https://app.example.com/requests/abc-123>`
+2. Click / fill in / select `<exact element label>`
 3. …
 
 Expected result:
@@ -88,7 +98,7 @@ Expected result:
 
 Edge cases to verify:
 - `<e.g. what happens if the field is blank>`
-- `<e.g. what happens at a boundary condition>`
+- `<e.g. what happens at a boundary condition — use record ID xyz-456 which is in that state>`
 
 ---
 

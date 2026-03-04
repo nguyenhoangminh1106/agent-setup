@@ -138,7 +138,7 @@ Edge cases to verify:
 - `<e.g. what happens if the field is left blank>`
 - `<e.g. what happens at the expiry boundary>`
 
-If DB queries were run to understand data shape, include specific example values the tester can use (e.g. "use request ID `abc-123` which is in `pending` state").
+If DB queries were run, every pre-condition and step MUST use exact real values from the DB — no placeholders. Specify the exact email to log in as, the exact company/tenant name, and the exact URL with real record IDs. The tester should never have to search or choose anything — tell them precisely what to click and where to go.
 
 ---
 
