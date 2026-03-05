@@ -9,7 +9,7 @@ arguments:
 
 ## Task
 
-Read the git diff for a branch, understand what changed, prompt the user for DB access if relevant, query the DB for concrete test data, then produce step-by-step UI testing instructions a human can follow without reading any code.
+Read the git diff for a branch, understand what changed, prompt the user for DB access if relevant, query the DB for concrete test data, then produce a single linear walkthrough a human can follow — start to finish, no backtracking — as if recording a demo video.
 
 Do not edit any code or run any state-changing commands.
 
@@ -63,48 +63,65 @@ Use the `/query-db` skill to find concrete, realistic values a tester can use. P
 - Example IDs or records in the states touched by this diff (e.g. "find a request in pending state")
 - Edge-case records that match boundary conditions in the code (e.g. "find an expired record", "find a record where <field> is null")
 - Any enum values, status codes, or categories referenced in the changed code
+- The single best user account (email + role) to cover the most features in one session
+- Any records that need to exist before testing (so they can be listed in setup)
 
-Collect these values — you will embed them directly in the testing steps.
+Collect ALL values now — everything needed will be declared upfront before any steps are written.
 
-**5) Write the testing instructions**
+**5) Plan the walkthrough order**
 
-CRITICAL RULE: If DB was queried in step 4b, every pre-condition and step MUST use the exact real values returned — no placeholders, no "find a user with X role", no "navigate to a record". Tell the tester exactly:
-- Which user/email to log in as (e.g. "log in as `alice@example.com`")
-- Which company, org, or tenant to use by name (e.g. "switch to company **Acme Corp**")
-- Which URL to navigate to with the real ID in the path (e.g. `https://app.example.com/requests/abc-123`)
-- Which record to click on by its real name or ID
-- What exact values to enter in forms if testing specific states
+Before writing any steps, determine the optimal linear order to test all features:
+- Group features by the same user session / page area to avoid logging in and out multiple times
+- Order features so earlier steps naturally set up state for later steps (e.g. create a record first, then test editing it)
+- Identify which features share the same URL or user context and batch them together
+- The goal: a single unbroken recording from login to the last assertion, with zero backtracking
 
-Never make the tester choose or search. If you have DB access, the tester should be able to follow the steps blindly.
+**6) Write the testing instructions**
 
-For each distinct feature or fix in the diff, produce a block:
+CRITICAL RULES:
+- **All setup goes in one upfront section** — every account, record, URL, and seed action needed for the entire walkthrough must be listed before Step 1. The tester completes all setup, then records without interruption.
+- **If DB was queried**, every pre-condition and step MUST use exact real values — no placeholders, no "find a user with X role", no "navigate to a record". Name the exact email, exact company/tenant, exact URL with real IDs.
+- **Linear flow only** — steps must flow forward. Never tell the tester to go back to a previous page, log out and back in, or repeat an earlier action mid-walkthrough (unless the feature itself requires it).
+- **One session where possible** — pick one user account that can see all changed features. Only switch users if a feature is only testable by a different role, and batch all same-role steps together.
 
 ---
 
-**[Feature or fix name]**
+### 🛠 Setup (do this before recording)
 
-Pre-conditions:
-- Log in as: `<exact email from DB>` (role: `<role>`)
-- Company / tenant: `<exact name from DB>` (if applicable)
-- Record to use: `<exact ID or name from DB>` — `<its current state>`
+List everything the tester must have ready before they start:
 
-Steps:
-1. Go to `<full URL with real IDs, e.g. https://app.example.com/requests/abc-123>`
+**Accounts:**
+- Log in as: `<exact email>` (role: `<role>`) — used for steps 1–N
+- Switch to: `<exact email>` (role: `<role>`) — used for steps N+1–M (only if role switch needed)
+
+**Records to have open / ready:**
+- `<Record name or ID>` at `<full URL>` — `<its state and why it's needed>`
+- `<Record name or ID>` at `<full URL>` — `<its state and why it's needed>`
+
+**Any seed actions needed:**
+- `<e.g. "Ensure record X is in 'pending' state — if not, reset it via [instructions]">`
+- `<e.g. "Open browser devtools console to watch for errors during step N">`
+
+---
+
+### 🎬 Walkthrough (record this)
+
+A single ordered sequence covering all features. No preamble — just numbered steps.
+
+1. Go to `<full URL with real IDs>`
 2. Click / fill in / select `<exact element label>`
-3. …
+3. Expect: `<what should appear or happen>`
+4. …
 
-Expected result:
-- `<what the user should see or experience>`
+Inline expected results as `Expect:` lines immediately after the action that triggers them — do not batch them at the end. This makes it easy to verify each action in real time while recording.
 
-Edge cases to verify:
-- `<e.g. what happens if the field is blank>`
-- `<e.g. what happens at a boundary condition — use record ID xyz-456 which is in that state>`
+For edge cases that require a separate action (e.g. submitting a blank form), include them as a natural continuation of the flow at the point where it makes sense — not in a separate section.
 
 ---
 
-**6) List gaps**
+**7) List gaps**
 
-After all feature blocks, add a short **Testing gaps / unknowns** section:
+After the walkthrough, add a short **⚠️ Testing gaps / unknowns** section:
 - Behaviors that couldn't be confirmed from the diff alone
 - Env vars or external services required
 - Anything requiring DB state the skill couldn't verify

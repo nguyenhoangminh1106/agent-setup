@@ -117,28 +117,13 @@ Include uncommitted changes with a note: *(uncommitted)*.
 
 ### 🧪 How to Test in the UI
 
-Concrete, ordered steps a human can follow right now. Write these as if the reader has never seen the code — just the running app.
+A single linear walkthrough designed for smooth video recording — no backtracking, no mid-session setup. Use the output from the `/testing-instructions` skill verbatim, which follows this structure:
 
-For each feature or fix, a block like:
+**🛠 Setup (do this before recording):** All accounts, records, and seed actions listed upfront so the tester can prepare everything before hitting record.
 
-**[Feature/fix name]**
+**🎬 Walkthrough (record this):** One unbroken sequence of numbered steps covering all features in the optimal order. Expected results appear inline as `Expect:` lines immediately after each action. Edge cases are woven into the flow at the natural point — not batched separately.
 
-Pre-conditions:
-- (any setup needed: logged-in user, specific role, existing DB record, etc.)
-
-Steps:
-1. Go to `<page or URL>`
-2. Click / fill in / select `<element>`
-3. …
-
-Expected result:
-- `<what should happen>`
-
-Edge cases to verify:
-- `<e.g. what happens if the field is left blank>`
-- `<e.g. what happens at the expiry boundary>`
-
-If DB queries were run, every pre-condition and step MUST use exact real values from the DB — no placeholders. Specify the exact email to log in as, the exact company/tenant name, and the exact URL with real record IDs. The tester should never have to search or choose anything — tell them precisely what to click and where to go.
+If DB queries were run, every step MUST use exact real values — exact email, exact company/tenant name, exact URLs with real record IDs. The tester follows blindly without searching or choosing.
 
 ---
 
