@@ -117,11 +117,11 @@ Include uncommitted changes with a note: *(uncommitted)*.
 
 ### 🧪 How to Test in the UI
 
-A single linear walkthrough designed for smooth video recording — no backtracking, no mid-session setup. Use the output from the `/testing-instructions` skill verbatim, which follows this structure:
+A single linear walkthrough — no backtracking, no mid-session setup. The tester completes all setup upfront, then goes through every step smoothly and covers all features without jumping around. Use the output from the `/testing-instructions` skill verbatim, which follows this structure:
 
-**🛠 Setup (do this before recording):** All accounts, records, and seed actions listed upfront so the tester can prepare everything before hitting record.
+**🛠 Setup (do all of this before starting):** All accounts, records, and seed actions listed upfront so the tester can prepare everything before starting.
 
-**🎬 Walkthrough (record this):** One unbroken sequence of numbered steps covering all features in the optimal order. Expected results appear inline as `Expect:` lines immediately after each action. Edge cases are woven into the flow at the natural point — not batched separately.
+**✅ Steps:** One unbroken sequence of numbered steps covering all features in the optimal order. Expected results appear inline as `Expect:` lines immediately after each action. Edge cases are woven into the flow at the natural point — not batched separately.
 
 If DB queries were run, every step MUST use exact real values — exact email, exact company/tenant name, exact URLs with real record IDs. The tester follows blindly without searching or choosing.
 

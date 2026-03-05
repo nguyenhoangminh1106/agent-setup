@@ -9,7 +9,7 @@ arguments:
 
 ## Task
 
-Read the git diff for a branch, understand what changed, prompt the user for DB access if relevant, query the DB for concrete test data, then produce a single linear walkthrough a human can follow — start to finish, no backtracking — as if recording a demo video.
+Read the git diff for a branch, understand what changed, prompt the user for DB access if relevant, query the DB for concrete test data, then produce a single linear walkthrough a human can follow — start to finish, no backtracking. The tester should be able to go through every step smoothly and cover all features without jumping around.
 
 Do not edit any code or run any state-changing commands.
 
@@ -74,19 +74,19 @@ Before writing any steps, determine the optimal linear order to test all feature
 - Group features by the same user session / page area to avoid logging in and out multiple times
 - Order features so earlier steps naturally set up state for later steps (e.g. create a record first, then test editing it)
 - Identify which features share the same URL or user context and batch them together
-- The goal: a single unbroken recording from login to the last assertion, with zero backtracking
+- The goal: a single unbroken flow from login to the last assertion, with zero backtracking
 
 **6) Write the testing instructions**
 
 CRITICAL RULES:
-- **All setup goes in one upfront section** — every account, record, URL, and seed action needed for the entire walkthrough must be listed before Step 1. The tester completes all setup, then records without interruption.
+- **All setup goes in one upfront section** — every account, record, URL, and seed action needed for the entire walkthrough must be listed before Step 1. The tester completes all setup first, then goes through the steps without interruption.
 - **If DB was queried**, every pre-condition and step MUST use exact real values — no placeholders, no "find a user with X role", no "navigate to a record". Name the exact email, exact company/tenant, exact URL with real IDs.
 - **Linear flow only** — steps must flow forward. Never tell the tester to go back to a previous page, log out and back in, or repeat an earlier action mid-walkthrough (unless the feature itself requires it).
 - **One session where possible** — pick one user account that can see all changed features. Only switch users if a feature is only testable by a different role, and batch all same-role steps together.
 
 ---
 
-### 🛠 Setup (do this before recording)
+### 🛠 Setup (do all of this before starting)
 
 List everything the tester must have ready before they start:
 
@@ -104,7 +104,7 @@ List everything the tester must have ready before they start:
 
 ---
 
-### 🎬 Walkthrough (record this)
+### ✅ Steps
 
 A single ordered sequence covering all features. No preamble — just numbered steps.
 
@@ -113,7 +113,7 @@ A single ordered sequence covering all features. No preamble — just numbered s
 3. Expect: `<what should appear or happen>`
 4. …
 
-Inline expected results as `Expect:` lines immediately after the action that triggers them — do not batch them at the end. This makes it easy to verify each action in real time while recording.
+Inline expected results as `Expect:` lines immediately after the action that triggers them — do not batch them at the end. This lets the tester verify each action as they go without losing their place.
 
 For edge cases that require a separate action (e.g. submitting a blank form), include them as a natural continuation of the flow at the point where it makes sense — not in a separate section.
 
