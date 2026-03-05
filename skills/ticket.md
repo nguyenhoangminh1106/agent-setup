@@ -21,7 +21,9 @@ You are a top-level orchestrator running in the terminal at the repo root. You a
 | 2. Worktree creation | **Claude Code** | Repo-aware, safe git ops |
 | 3. Planning | **Codex CLI** | Diff-minimization and plan discipline |
 | 4. Implementation | **Claude Code** | Safer code edits, repo-aware |
-| 5. Risk review loop | **Codex CLI** | Objective validation against ticket intent |
+| 4b. Spec review loop | **Codex CLI** | Re-validates implementation against spec before risk review |
+| 4c. Spec fix iterations | **Claude Code** | Controlled corrective edits from spec review |
+| 5. Risk review loop | **Claude Code** | Objective validation against ticket intent |
 | 5b. Fix iterations | **Claude Code** | Controlled corrective edits |
 | 6. AI comment cleanup | **Claude Code** | Comment-only edits |
 | 7. Commit and push | **Claude Code** | Repo-safe execution |
@@ -80,6 +82,7 @@ If the subprocess exits non-zero, print:
 **Artifacts** are saved to `.ticket/<branch>/` between steps so each ticket run is isolated and runs never overwrite each other:
 - `spec.md` — output of the `spec` skill (Step 1)
 - `plan.md` — Codex planning output (Step 3)
+- `spec-review-1.md`, `spec-review-2.md`, `spec-review-3.md` — per-round spec review output (Step 4b)
 - `risk-1.md`, `risk-2.md`, `risk-3.md` — per-round risk review output (Step 5)
 
 Each tool reads its input artifact from disk and writes its output artifact to disk. Never pass stale in-memory content between steps.
@@ -206,7 +209,78 @@ Read the plan from disk: .ticket/<branch>/plan.md"
 
 ---
 
-### Step 5 — Risk Review Loop (Codex reviews, Claude Code fixes)
+### Step 4b — Spec Review Loop (Codex reviews, Claude Code fixes)
+
+Run up to 3 rounds. Each round re-reads the spec and the current diff to verify the implementation matches the spec intent.
+
+**Each round:**
+
+**4b-i) Capture fresh diff**
+
+Print:
+```
+════════════════════════════════════════
+▶ Step 4b-i — Diff capture  [tool: bash]  (round <N>/3)
+   Fetching origin and diffing branch against main
+════════════════════════════════════════
+```
+```bash
+git fetch origin
+git diff origin/main...<branch> > .ticket/<branch>/diff-current.md
+```
+If the diff is empty: STOP and report — no changes on branch.
+
+**4b-ii) Codex reviews spec alignment**
+
+Print:
+```
+════════════════════════════════════════
+▶ Step 4b-ii — Spec review  [tool: codex]  (round <N>/3)
+   Verifying implementation matches spec requirements
+════════════════════════════════════════
+```
+```bash
+codex exec "You are a spec compliance reviewer. Check whether the implementation satisfies every requirement in the spec.
+
+Read both artifacts fresh from disk:
+- Spec: .ticket/<branch>/spec.md
+- Diff: .ticket/<branch>/diff-current.md
+
+Classify each finding:
+- BLOCKER: a spec requirement is missing or incorrectly implemented
+- FIX: a requirement is partially met or could better match the spec intent
+- NOTE: informational only
+
+Explicitly check:
+- Are all acceptance criteria from the spec addressed in the diff?
+- Does the implementation match the spec's described behavior exactly?
+- Are there any spec requirements not yet implemented?
+- Does anything in the diff contradict the spec?"
+```
+
+Save output to `.ticket/<branch>/spec-review-<N>.md`.
+
+**4b-iii) Claude Code applies fixes**
+
+Print:
+```
+════════════════════════════════════════
+▶ Step 4b-iii — Spec fix application  [tool: claude]  (round <N>/3)
+   Applying BLOCKER and FIX items from spec review
+════════════════════════════════════════
+```
+```bash
+claude -p --output-format stream-json "Apply only the BLOCKER and FIX items from the spec review. Minimal diffs only. No refactors. Ignore NOTE items.
+
+Read the spec review from disk: .ticket/<branch>/spec-review-<N>.md
+Read the spec from disk: .ticket/<branch>/spec.md"
+```
+
+Exit the loop early if no BLOCKER or FIX items remain. After round 3, if BLOCKERs still exist: STOP and report.
+
+---
+
+### Step 5 — Risk Review Loop (Claude Code reviews and fixes)
 
 Run up to 3 rounds. Each round uses a freshly captured diff — never reuse a diff from a prior round.
 
@@ -227,17 +301,17 @@ git diff origin/main...<branch> > .ticket/<branch>/diff-current.md
 ```
 If the diff is empty: STOP and report — no changes on branch.
 
-**5b) Codex reviews**
+**5b) Claude Code reviews**
 
 Print:
 ```
 ════════════════════════════════════════
-▶ Step 5b — Risk review  [tool: codex]  (round <N>/3)
+▶ Step 5b — Risk review  [tool: claude]  (round <N>/3)
    Reviewing diff for blockers, regressions, and scope drift
 ════════════════════════════════════════
 ```
 ```bash
-codex exec "You are a code risk reviewer. Review the diff against the spec.
+claude -p --output-format stream-json "You are a code risk reviewer. Review the diff against the spec.
 
 Read both artifacts fresh from disk:
 - Spec: .ticket/<branch>/spec.md

@@ -207,8 +207,63 @@ Safety: no force push, no DROP/DELETE/ALTER TABLE/migrations, no changes to main
 
 Read the plan from disk: $ARTIFACTS/plan.md"
 
-# ── Step 5 — Risk Review Loop (Codex reviews, Claude fixes) ───────────────────
-step 5 "Risk Review Loop"
+# ── Step 4b — Spec Review Loop (Codex reviews, Claude fixes) ──────────────────
+step "4b" "Spec Review Loop (Codex reviews, Claude fixes)"
+
+for ROUND in 1 2 3; do
+  echo "[STEP:4b] Spec review round ${ROUND}/3"
+  log "  Spec review round $ROUND / 3"
+
+  # 4b-i: fresh diff
+  git fetch origin
+  git diff origin/main...HEAD > "$ARTIFACTS/diff-current.md"
+
+  if [[ ! -s "$ARTIFACTS/diff-current.md" ]]; then
+    echo "  No diff found — branch has no changes. Stopping."
+    break
+  fi
+
+  # 4b-ii: Codex reviews spec alignment
+  codex_run "You are a spec compliance reviewer. Check whether the implementation satisfies every requirement in the spec.
+
+Read both artifacts fresh from disk:
+- Spec: $ARTIFACTS/spec.md
+- Diff: $ARTIFACTS/diff-current.md
+
+Classify each finding:
+- BLOCKER: a spec requirement is missing or incorrectly implemented
+- FIX: a requirement is partially met or could better match the spec intent
+- NOTE: informational only
+
+Explicitly check:
+- Are all acceptance criteria from the spec addressed in the diff?
+- Does the implementation match the spec's described behavior exactly?
+- Are there any spec requirements not yet implemented?
+- Does anything in the diff contradict the spec?" > "$ARTIFACTS/spec-review-${ROUND}.md"
+
+  echo "  Spec review saved to $ARTIFACTS/spec-review-${ROUND}.md"
+
+  # Check for BLOCKERs or FIXes
+  if ! grep -qiE "^-?\s*(BLOCKER|FIX):" "$ARTIFACTS/spec-review-${ROUND}.md"; then
+    echo "  No BLOCKER or FIX items — exiting spec review loop early."
+    break
+  fi
+
+  # 4b-iii: Claude applies fixes
+  claude_run "Apply only the BLOCKER and FIX items from the spec review. Minimal diffs only. No refactors. Ignore NOTE items.
+
+Read the spec review from disk: $ARTIFACTS/spec-review-${ROUND}.md
+Read the spec from disk: $ARTIFACTS/spec.md"
+
+  if [[ "$ROUND" -eq 3 ]]; then
+    if grep -qiE "^-?\s*BLOCKER:" "$ARTIFACTS/spec-review-${ROUND}.md"; then
+      die "Spec BLOCKERs still present after 3 rounds. Stopping — human review required."
+    fi
+  fi
+done
+
+# ── Step 5 — Risk Review Loop (Claude reviews and fixes) ──────────────────────
+step 5 "Risk Review Loop (Claude Code)"
 
 for ROUND in 1 2 3; do
   echo "[STEP:5] Risk review round ${ROUND}/3"
@@ -223,8 +278,8 @@ for ROUND in 1 2 3; do
     break
   fi
 
-  # 5b: Codex reviews
-  codex_run "You are a code risk reviewer. Review the diff against the spec.
+  # 5b: Claude reviews
+  claude_run "You are a code risk reviewer. Review the diff against the spec.
 
 Read both artifacts fresh from disk:
 - Spec: $ARTIFACTS/spec.md
@@ -240,8 +295,11 @@ Explicitly check:
 - Diff size: any unnecessary files or lines changed?
 - DB/schema changes (skip *.sql and migrations/ — humans write those): any ORM model or schema change not strictly required? → BLOCKER if so.
 - Intent loss: does the implementation still match the spec goals?
-- Hidden data risk: any writes, deletes, or transforms on existing data rows?" > "$ARTIFACTS/risk-${ROUND}.md"
+- Hidden data risk: any writes, deletes, or transforms on existing data rows?
 
+Save your full review output to: $ARTIFACTS/risk-${ROUND}.md"
+
+  [[ -s "$ARTIFACTS/risk-${ROUND}.md" ]] || die "risk-${ROUND}.md is empty — Claude risk review failed"
   echo "  Risk review saved to $ARTIFACTS/risk-${ROUND}.md"
 
   # Check for BLOCKERs or FIXes
