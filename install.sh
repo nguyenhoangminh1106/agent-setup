@@ -26,6 +26,7 @@ SKILLS=(
   "feature-summary"
   "testing-instructions"
   "query-db"
+  "daily-update"
 )
 
 # Download then install each skill
