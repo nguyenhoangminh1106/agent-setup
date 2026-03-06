@@ -28,6 +28,7 @@ SKILLS=(
   "query-db"
   "daily-update"
   "db-unsync-fix"
+  "pr-description"
 )
 
 # Download then install each skill
