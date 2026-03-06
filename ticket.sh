@@ -362,15 +362,22 @@ claude_run "/commit-push"
 # ── Step 8 — Final Report (Claude Code via feature-summary skill) ──────────────
 step 8 "Final Report (Claude Code)"
 
-claude_run "/feature-summary target=$BRANCH spec=$ARTIFACTS/spec.md db=skip"
+claude_run "/feature-summary target=$BRANCH spec=$ARTIFACTS/spec.md db=skip" | tee "$ARTIFACTS/report.md"
+
+COMPARE_URL=$(gh pr view --json url --jq .url 2>/dev/null || {
+  base=$(git remote get-url origin | sed 's/\.git$//')
+  cur=$(git branch --show-current)
+  echo "${base}/compare/main...${cur}"
+})
+echo "" >> "$ARTIFACTS/report.md"
+echo "---" >> "$ARTIFACTS/report.md"
+echo "Compare: $COMPARE_URL" >> "$ARTIFACTS/report.md"
 
 echo ""
 echo "── Compare URL ──────────────────────────────────────────"
-gh pr view --json url --jq .url 2>/dev/null || {
-  base=$(git remote get-url origin | sed 's/\.git$//')
-  branch=$(git branch --show-current)
-  echo "${base}/compare/main...${branch}"
-}
+echo "$COMPARE_URL"
+echo ""
+echo "Report saved to $ARTIFACTS/report.md"
 echo ""
 
 # ── Step 9 — Worktree Cleanup (Claude Code) ───────────────────────────────────

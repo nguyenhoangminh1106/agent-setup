@@ -84,6 +84,7 @@ If the subprocess exits non-zero, print:
 - `plan.md` — Codex planning output (Step 3)
 - `spec-review-1.md`, `spec-review-2.md`, `spec-review-3.md` — per-round spec review output (Step 4b)
 - `risk-1.md`, `risk-2.md`, `risk-3.md` — per-round risk review output (Step 5)
+- `report.md` — final feature summary and UI testing instructions (Step 8)
 
 Each tool reads its input artifact from disk and writes its output artifact to disk. Never pass stale in-memory content between steps.
 
@@ -401,17 +402,22 @@ Print the progress banner then run:
 ════════════════════════════════════════
 ```
 ```bash
-claude -p --output-format stream-json "/feature-summary target=<branch> spec=.ticket/<branch>/spec.md db=skip"
+claude -p --output-format stream-json "/feature-summary target=<branch> spec=.ticket/<branch>/spec.md db=skip" \
+  | tee .ticket/<branch>/report.md
 ```
 
-After the skill output, append the compare URL:
+Append the compare URL to the report file:
 ```bash
-gh pr view --json url --jq .url 2>/dev/null || {
+COMPARE_URL=$(gh pr view --json url --jq .url 2>/dev/null || {
   base=$(git remote get-url origin | sed 's/\.git$//')
-  branch=$(git branch --show-current)
-  echo "${base}/compare/main...${branch}"
-}
+  echo "${base}/compare/main...<branch>"
+})
+echo "" >> .ticket/<branch>/report.md
+echo "---" >> .ticket/<branch>/report.md
+echo "Compare: $COMPARE_URL" >> .ticket/<branch>/report.md
 ```
+
+The full report is saved to `.ticket/<branch>/report.md`.
 
 ---
 
