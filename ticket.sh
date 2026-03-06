@@ -138,7 +138,7 @@ step 2 "Worktree (Claude Code)"
 echo "Branch: $BRANCH"
 claude_run "/worktree-create branch=$BRANCH repo=$REPO yes=true"
 
-# Resolve worktree path — always inside the repo under .claude/worktrees
+# Resolve worktree path — must be inside the repo under .claude/worktrees
 WORKTREE=""
 if [[ -d "$REPO/.claude/worktrees/$BRANCH" ]]; then
   WORKTREE="$REPO/.claude/worktrees/$BRANCH"
@@ -146,8 +146,16 @@ fi
 
 if [[ -z "$WORKTREE" ]]; then
   # Fallback: ask git directly; pass branch as awk variable to avoid regex/quoting issues
-  WORKTREE="$(git -C "$REPO" worktree list --porcelain \
+  RESOLVED="$(git -C "$REPO" worktree list --porcelain \
     | awk -v branch="refs/heads/$BRANCH" '/^worktree/{wt=$2} /^branch /{if($2==branch){print wt; exit}}')"
+  # Only accept if it's inside the repo
+  if [[ -n "$RESOLVED" && "$RESOLVED" == "$REPO"* ]]; then
+    WORKTREE="$RESOLVED"
+  elif [[ -n "$RESOLVED" ]]; then
+    die "Worktree for '$BRANCH' exists outside the repo at: $RESOLVED
+Run: git -C \"$REPO\" worktree remove \"$RESOLVED\" && git -C \"$REPO\" branch -D \"$BRANCH\"
+Then re-run ticket to create it in the correct location ($REPO/.claude/worktrees/$BRANCH)."
+  fi
 fi
 
 if [[ -z "$WORKTREE" ]]; then
@@ -155,7 +163,6 @@ if [[ -z "$WORKTREE" ]]; then
 fi
 
 echo "Working directory: $WORKTREE"
-# Also cd into it so shell-level git commands (Step 5 diff) run in the right place
 cd "$WORKTREE"
 
 # ── Step 3 — Plan (Codex) ─────────────────────────────────────────────────────

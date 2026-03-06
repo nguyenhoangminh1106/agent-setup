@@ -54,7 +54,8 @@ git show-ref --verify --quiet refs/remotes/origin/<branch>  # REMOTE_BRANCH=1/0
 
 | Case | Condition | Plan |
 |---|---|---|
-| A | Branch already checked out by an existing worktree | Report path and STOP. |
+| A | Branch already checked out by a worktree **inside** `ROOT/.claude/worktrees` | Report path and STOP — reuse it. |
+| A2 | Branch already checked out by a worktree **outside** `ROOT/.claude/worktrees` | STOP with error: tell the user to remove the old worktree first with `git worktree remove <path>`, then re-run. Never silently reuse an out-of-repo worktree. |
 | B | LOCAL_BRANCH=1, not in another worktree | `git worktree add "ROOT/.claude/worktrees/<branch>" "<branch>"` |
 | C | LOCAL_BRANCH=0, REMOTE_BRANCH=1 | `git worktree add -b "<branch>" "ROOT/.claude/worktrees/<branch>" "origin/<branch>"` |
 | D | LOCAL_BRANCH=0, REMOTE_BRANCH=0 | `git worktree add -b "<branch>" "ROOT/.claude/worktrees/<branch>" "<baseRef>"` |
