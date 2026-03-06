@@ -31,13 +31,9 @@ git rev-parse --show-toplevel
 ```
 If not a git repo: stop and explain.
 
-**2) Detect worktrees base dir** (no confirmation needed)
-Check in this order and use the first that exists:
-- `ROOT/.claude/worktrees`
-- `ROOT/.codex/worktrees`
-- `ROOT/.cursor/worktrees`
+**2) Set worktrees base dir**
 
-If none exist: default to `ROOT/.claude/worktrees` (create it silently in step 7).
+Always use `ROOT/.claude/worktrees`. Create it silently in step 7 if it doesn't exist. Never use paths outside the repo root (e.g. `~/.cursor/worktrees`, `~/.claude/worktrees`).
 
 **3) Decide branch name** (no confirmation needed unless truly unclear)
 - If `{{branch}}` provided: use it as-is.
@@ -59,9 +55,9 @@ git show-ref --verify --quiet refs/remotes/origin/<branch>  # REMOTE_BRANCH=1/0
 | Case | Condition | Plan |
 |---|---|---|
 | A | Branch already checked out by an existing worktree | Report path and STOP. |
-| B | LOCAL_BRANCH=1, not in another worktree | `git worktree add "<BASE>/<branch>" "<branch>"` |
-| C | LOCAL_BRANCH=0, REMOTE_BRANCH=1 | `git worktree add -b "<branch>" "<BASE>/<branch>" "origin/<branch>"` |
-| D | LOCAL_BRANCH=0, REMOTE_BRANCH=0 | `git worktree add -b "<branch>" "<BASE>/<branch>" "<baseRef>"` |
+| B | LOCAL_BRANCH=1, not in another worktree | `git worktree add "ROOT/.claude/worktrees/<branch>" "<branch>"` |
+| C | LOCAL_BRANCH=0, REMOTE_BRANCH=1 | `git worktree add -b "<branch>" "ROOT/.claude/worktrees/<branch>" "origin/<branch>"` |
+| D | LOCAL_BRANCH=0, REMOTE_BRANCH=0 | `git worktree add -b "<branch>" "ROOT/.claude/worktrees/<branch>" "<baseRef>"` |
 
 For case D, base ref = `{{base}}` if provided, else `origin/main` if exists, else `main`, else `HEAD`.
 

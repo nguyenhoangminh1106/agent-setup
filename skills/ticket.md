@@ -132,14 +132,9 @@ Print the progress banner then run:
 claude -p --output-format stream-json "/worktree-create branch=<branch> repo={{repo}} yes=true"
 ```
 
-After the skill runs, resolve the worktree path by checking these locations in order:
-1. `<repo>/.claude/worktrees/<branch>`
-2. `<repo>/.codex/worktrees/<branch>`
-3. `<repo>/.cursor/worktrees/<branch>`
-4. `~/.claude/worktrees/<repo-name>/<branch>`
-5. `~/.codex/worktrees/<repo-name>/<branch>`
-6. `~/.cursor/worktrees/<repo-name>/<branch>`
-7. Last resort: `git worktree list --porcelain` — find the entry whose branch matches
+After the skill runs, resolve the worktree path:
+1. Primary: `<repo>/.claude/worktrees/<branch>`
+2. Fallback: `git worktree list --porcelain` — find the entry whose branch matches
 
 Do not continue until the worktree path is confirmed. All subsequent steps must run inside this directory.
 
