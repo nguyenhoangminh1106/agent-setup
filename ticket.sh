@@ -37,7 +37,7 @@ mkdir -p "$ARTIFACTS_ROOT"
 log()  { echo ""; echo "▶ $*"; echo ""; }
 die()  { echo "[STATUS:failed] $*" >&2; echo ""; echo "ERROR: $*" >&2; exit 1; }
 # step N "desc" — emits [STEP:N] prefix for dashboard parsing then calls log()
-step() { local n="$1"; shift; echo "[STEP:${n}] $*"; log "Step ${n} — $*"; }
+step() { local n="$1"; local desc="$2"; echo "[STEP:${n}] ${desc}"; log "Step ${n} — ${desc}"; }
 
 require() {
   command -v "$1" &>/dev/null || die "'$1' is not installed or not in PATH"
