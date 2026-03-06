@@ -230,7 +230,9 @@ Print:
 ```
 ```bash
 git fetch origin
-git diff origin/main...<branch> > .ticket/<branch>/diff-current.md
+git diff origin/main...<branch> > .ticket/<branch>/diff-current.md   # committed
+git diff HEAD >> .ticket/<branch>/diff-current.md                      # unstaged
+git diff --cached >> .ticket/<branch>/diff-current.md                  # staged
 ```
 If the diff is empty: STOP and report — no changes on branch.
 
@@ -301,7 +303,9 @@ Print:
 ```
 ```bash
 git fetch origin
-git diff origin/main...<branch> > .ticket/<branch>/diff-current.md
+git diff origin/main...<branch> > .ticket/<branch>/diff-current.md   # committed
+git diff HEAD >> .ticket/<branch>/diff-current.md                      # unstaged
+git diff --cached >> .ticket/<branch>/diff-current.md                  # staged
 ```
 If the diff is empty: STOP and report — no changes on branch.
 

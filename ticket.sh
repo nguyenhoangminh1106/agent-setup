@@ -217,9 +217,13 @@ for ROUND in 1 2 3; do
   echo "[STEP:4b] Spec review round ${ROUND}/3"
   log "  Spec review round $ROUND / 3"
 
-  # 4b-i: fresh diff
+  # 4b-i: fresh diff (committed + uncommitted vs origin/main)
   git fetch origin
-  git diff origin/main...HEAD > "$ARTIFACTS/diff-current.md"
+  {
+    git diff origin/main...HEAD   # committed changes on branch
+    git diff HEAD                 # unstaged changes
+    git diff --cached             # staged changes
+  } > "$ARTIFACTS/diff-current.md"
 
   if [[ ! -s "$ARTIFACTS/diff-current.md" ]]; then
     echo "  No diff found — branch has no changes. Stopping."
@@ -272,9 +276,13 @@ for ROUND in 1 2 3; do
   echo "[STEP:5] Risk review round ${ROUND}/3"
   log "  Risk review round $ROUND / 3"
 
-  # 5a: fresh diff (shell is cd'd into worktree, so git runs in the right branch)
+  # 5a: fresh diff (committed + uncommitted vs origin/main)
   git fetch origin
-  git diff origin/main...HEAD > "$ARTIFACTS/diff-current.md"
+  {
+    git diff origin/main...HEAD   # committed changes on branch
+    git diff HEAD                 # unstaged changes
+    git diff --cached             # staged changes
+  } > "$ARTIFACTS/diff-current.md"
 
   if [[ ! -s "$ARTIFACTS/diff-current.md" ]]; then
     echo "  No diff found — branch has no changes. Stopping."
