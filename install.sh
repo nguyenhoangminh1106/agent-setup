@@ -27,6 +27,7 @@ SKILLS=(
   "testing-instructions"
   "query-db"
   "daily-update"
+  "db-unsync-fix"
 )
 
 # Download then install each skill
