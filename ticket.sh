@@ -136,6 +136,16 @@ echo "[BRANCH:${BRANCH}]"
 step 2 "Worktree (Claude Code)"
 
 echo "Branch: $BRANCH"
+
+# Pre-check: if the branch is already checked out outside the repo, remove it first
+EXISTING_WT="$(git -C "$REPO" worktree list --porcelain \
+  | awk -v branch="refs/heads/$BRANCH" '/^worktree/{wt=$2} /^branch /{if($2==branch){print wt; exit}}')"
+if [[ -n "$EXISTING_WT" && "$EXISTING_WT" != "$REPO"* ]]; then
+  echo "Found out-of-repo worktree at $EXISTING_WT — removing it before creating in the correct location..."
+  git -C "$REPO" worktree remove --force "$EXISTING_WT"
+  echo "Removed. Will create worktree at $REPO/.claude/worktrees/$BRANCH"
+fi
+
 claude_run "/worktree-create branch=$BRANCH repo=$REPO yes=true"
 
 # Resolve worktree path — must be inside the repo under .claude/worktrees
