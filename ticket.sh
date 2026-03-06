@@ -138,8 +138,15 @@ step 2 "Worktree (Claude Code)"
 echo "Branch: $BRANCH"
 claude_run "/worktree-create branch=$BRANCH repo=$REPO yes=true"
 
-# Resolve worktree path — try claude, then codex, then cursor directories
-for base in "$REPO/.claude/worktrees" "$REPO/.codex/worktrees" "$REPO/.cursor/worktrees"; do
+# Resolve worktree path — check both repo-local and home-level tool directories
+REPO_NAME="$(basename "$REPO")"
+for base in \
+  "$REPO/.claude/worktrees" \
+  "$REPO/.codex/worktrees" \
+  "$REPO/.cursor/worktrees" \
+  "$HOME/.claude/worktrees/$REPO_NAME" \
+  "$HOME/.codex/worktrees/$REPO_NAME" \
+  "$HOME/.cursor/worktrees/$REPO_NAME"; do
   if [[ -d "$base/$BRANCH" ]]; then
     WORKTREE="$base/$BRANCH"
     break
@@ -147,7 +154,12 @@ for base in "$REPO/.claude/worktrees" "$REPO/.codex/worktrees" "$REPO/.cursor/wo
 done
 
 if [[ -z "$WORKTREE" ]]; then
-  die "Worktree not found after creation. Looked in .claude/.codex/.cursor/worktrees/$BRANCH"
+  # Last resort: ask git directly
+  WORKTREE="$(git -C "$REPO" worktree list --porcelain | grep -A1 "branch refs/heads/$BRANCH" | grep "^worktree" | awk '{print $2}' | head -1)"
+fi
+
+if [[ -z "$WORKTREE" ]]; then
+  die "Worktree not found after creation. Looked in repo-local and ~/.[claude|codex|cursor]/worktrees/$REPO_NAME/$BRANCH"
 fi
 
 echo "Working directory: $WORKTREE"
