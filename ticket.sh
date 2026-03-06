@@ -145,8 +145,9 @@ if [[ -d "$REPO/.claude/worktrees/$BRANCH" ]]; then
 fi
 
 if [[ -z "$WORKTREE" ]]; then
-  # Fallback: ask git directly (covers any path the skill may have used)
-  WORKTREE="$(git -C "$REPO" worktree list --porcelain | awk '/^worktree/{wt=$2} /^branch refs\/heads\/'"$BRANCH"'$/{print wt}' | head -1)"
+  # Fallback: ask git directly; pass branch as awk variable to avoid regex/quoting issues
+  WORKTREE="$(git -C "$REPO" worktree list --porcelain \
+    | awk -v branch="refs/heads/$BRANCH" '/^worktree/{wt=$2} /^branch /{if($2==branch){print wt; exit}}')"
 fi
 
 if [[ -z "$WORKTREE" ]]; then
