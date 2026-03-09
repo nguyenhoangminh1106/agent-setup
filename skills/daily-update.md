@@ -1,6 +1,9 @@
 ---
 description: "Generate Minh's daily work update: gather context from Slack (Beeper), Linear, GitHub, and Claude Code sessions, match past entry style, show draft for approval, then append to the updates file."
-arguments: []
+arguments:
+  - name: author
+    description: "GitHub username to filter commits and PRs (default: nguyenhoangminh1106)"
+    required: false
 ---
 
 ## Task
@@ -38,11 +41,13 @@ Look up Linear tickets updated or completed today:
 
 **3) Check GitHub activity**
 
+Use the GitHub username from `$ARGUMENTS` (e.g. `author=nguyenhoangminh1106`), defaulting to `nguyenhoangminh1106` if not provided.
+
 ```bash
 cd ~/Documents/GitHub/paraform
-git log --oneline --since="midnight" --author="Minh"
-gh pr list --author @me --state open
-gh pr list --author @me --state merged --limit 5
+git log --oneline --since="midnight" --author="<author>"
+gh pr list --author <author> --state open
+gh pr list --author <author> --state merged --limit 5
 ```
 
 Also check for review comments received or addressed on open PRs today.
