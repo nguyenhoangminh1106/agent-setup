@@ -421,20 +421,24 @@ The full report is saved to `.ticket/<branch>/report.md`.
 
 ---
 
-### Step 9 — Worktree Cleanup (Claude Code)
+### Step 9 — Worktree Cleanup
+
+The worktree-remove skill is interactive (it asks "Proceed?") and will block when called headlessly. Run the removal directly instead:
 
 Print the progress banner then run:
 ```
 ════════════════════════════════════════
-▶ Step 9 — Worktree Cleanup  [tool: claude]
+▶ Step 9 — Worktree Cleanup  [tool: bash]
    Removing local worktree directory (branch kept on remote)
 ════════════════════════════════════════
 ```
 ```bash
-claude -p --output-format stream-json "/worktree-remove target=<branch> repo={{repo}}"
+cd <repo>
+git worktree remove "<worktreePath>" || git worktree remove --force "<worktreePath>"
+git worktree prune
 ```
 
-Do NOT pass `delete_branch=true` — the branch must be preserved on the remote. If the worktree has unexpected uncommitted changes: STOP and report, do not force.
+Do NOT delete the branch. If the worktree directory does not exist, skip and log a warning.
 
 Print on success:
 ```

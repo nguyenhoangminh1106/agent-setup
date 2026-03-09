@@ -380,9 +380,15 @@ echo ""
 echo "Report saved to $ARTIFACTS/report.md"
 echo ""
 
-# ── Step 9 — Worktree Cleanup (Claude Code) ───────────────────────────────────
-step 9 "Worktree Cleanup (Claude Code)"
-# Run from the repo root, not the worktree, since we're about to remove it
-(cd "$REPO" && claude --dangerously-skip-permissions -p "/worktree-remove target=$BRANCH repo=$REPO")
-echo "Worktree removed. Branch $BRANCH is preserved on the remote."
+# ── Step 9 — Worktree Cleanup ─────────────────────────────────────────────────
+step 9 "Worktree Cleanup"
+# Run directly — skip the interactive worktree-remove skill (it asks "Proceed?" and blocks headlessly)
+cd "$REPO"
+if [[ -d "$WORKTREE" ]]; then
+  git worktree remove "$WORKTREE" 2>/dev/null || git worktree remove --force "$WORKTREE"
+  git worktree prune
+  echo "Worktree removed. Branch $BRANCH is preserved on the remote."
+else
+  echo "Worktree directory not found at $WORKTREE — skipping removal."
+fi
 echo "[STATUS:completed]"
