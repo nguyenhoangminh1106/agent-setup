@@ -55,8 +55,10 @@ WORKTREE=""
 # claude_run: runs Claude Code headlessly in the worktree directory
 claude_run() {
   if [[ -n "$WORKTREE" ]]; then
-    (cd "$WORKTREE" && claude --dangerously-skip-permissions -p "$1")
+    echo "DEBUG claude_run: running in WORKTREE=$WORKTREE"
+    (cd "$WORKTREE" && echo "DEBUG claude_run subshell CWD=$(pwd)" && claude --dangerously-skip-permissions --add-dir "$WORKTREE" -p "$1")
   else
+    echo "DEBUG claude_run: WORKTREE not set, running in CWD=$(pwd)"
     claude --dangerously-skip-permissions -p "$1"
   fi
 }
@@ -284,14 +286,20 @@ claude_run "/worktree-create branch=$BRANCH repo=$REPO yes=true"
 
 # Resolve worktree path — must be inside the repo under .claude/worktrees
 WORKTREE=""
-if [[ -d "$REPO/.claude/worktrees/$BRANCH" ]]; then
-  WORKTREE="$REPO/.claude/worktrees/$BRANCH"
+EXPECTED_WT="$REPO/.claude/worktrees/$BRANCH"
+echo "DEBUG: checking for worktree at $EXPECTED_WT"
+if [[ -d "$EXPECTED_WT" ]]; then
+  WORKTREE="$EXPECTED_WT"
+  echo "DEBUG: found via -d check"
 fi
 
 if [[ -z "$WORKTREE" ]]; then
   # Fallback: ask git directly; pass branch as awk variable to avoid regex/quoting issues
+  echo "DEBUG: -d check failed, trying git worktree list..."
+  git -C "$REPO" worktree list --porcelain
   RESOLVED="$(git -C "$REPO" worktree list --porcelain \
     | awk -v branch="refs/heads/$BRANCH" '/^worktree/{wt=$2} /^branch /{if($2==branch){print wt; exit}}')"
+  echo "DEBUG: git worktree resolved='$RESOLVED'"
   # Only accept if it's inside the repo
   if [[ -n "$RESOLVED" && "$RESOLVED" == "$REPO"* ]]; then
     WORKTREE="$RESOLVED"
@@ -307,7 +315,9 @@ if [[ -z "$WORKTREE" ]]; then
 fi
 
 echo "Working directory: $WORKTREE"
+echo "DEBUG: WORKTREE=$WORKTREE"
 cd "$WORKTREE"
+echo "DEBUG: CWD is now $(pwd)"
 
 # ── Step 3 — Plan (Codex) ─────────────────────────────────────────────────────
 # Auto-skip if plan already exists for this branch.
