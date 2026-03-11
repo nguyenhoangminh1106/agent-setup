@@ -23,7 +23,11 @@ Read the context and produce exactly one valid git branch name. Nothing else.
 
 **1) Read the context**
 
-If `{{context}}` starts with `/` or `./`, read the file from disk. Otherwise treat it as inline text.
+Detect the input type:
+- **File path** (starts with `/` or `./`): read the file from disk, then re-detect what's inside it.
+- **Linear URL** (`linear.app/...`): extract the issue ID (e.g. `ENG-5618`) and fetch the title using the Linear MCP tool (already connected). If MCP is unavailable, use the URL slug as the description.
+- **GitHub issue number or URL**: `gh issue view <id> --json title`
+- **Plain text**: use as-is.
 
 **2) Check existing branch convention**
 

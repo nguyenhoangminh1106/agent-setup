@@ -21,10 +21,15 @@ Read everything the user provided — ticket, chat, context, decisions — then 
 
 **1) Ingest all input**
 
-Read `{{input}}` in full. If it is a GitHub issue number or URL, fetch it first:
-```
-gh issue view {{input}} --json title,body,labels,assignees,comments
-```
+Read `{{input}}` in full. Detect the input type and fetch accordingly:
+
+- **File path** (starts with `/` or `./`): read the file from disk.
+- **GitHub issue number or URL** (`github.com` or bare number): fetch with:
+  ```
+  gh issue view {{input}} --json title,body,labels,assignees,comments
+  ```
+- **Linear URL** (`linear.app/...`): extract the issue ID (e.g. `ENG-5618`) from the URL. Fetch using the Linear MCP tool (already connected). If MCP is unavailable, proceed with the URL slug as context and note the limitation.
+- **Plain text**: use as-is.
 
 Treat everything — ticket body, discussion comments, decisions, constraints — as context. Nothing is discarded.
 
