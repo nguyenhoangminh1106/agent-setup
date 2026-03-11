@@ -25,7 +25,7 @@ After editing skills locally, push and re-run `./install.sh` on other machines.
 - `skills/` — Skills are organised into subfolders by category. Each file is a self-contained prompt with YAML frontmatter (`description`, `arguments`) followed by procedural instructions.
   - `skills/git/` — `commit-push`, `name-branch`, `worktree-create`, `worktree-remove`
   - `skills/review/` — `branch-risk-review`, `clean-ai-comments`, `pr-description`, `pr-triage`
-  - `skills/ticket/` — `clarify`, `spec`, `ticket`
+  - `skills/ticket/` — `clarify`, `linear-fetch`, `spec`, `ticket`
   - `skills/project/` — `daily-update`, `feature-summary`, `testing-instructions`
   - `skills/data/` — `db-unsync-fix`, `query-db`
 - `install.sh` — Downloads each skill and installs it **flat** into `~/.claude/commands/<name>.md` (and Codex/Cursor equivalents). Subfolders are repo organisation only — the installed names are unchanged so all `/skill-name` references keep working.

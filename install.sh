@@ -24,6 +24,7 @@ SKILLS=(
   "clean-ai-comments:review/clean-ai-comments.md"
   "pr-description:review/pr-description.md"
   "pr-triage:review/pr-triage.md"
+  "linear-fetch:ticket/linear-fetch.md"
   "clarify:ticket/clarify.md"
   "spec:ticket/spec.md"
   "ticket:ticket/ticket.md"
