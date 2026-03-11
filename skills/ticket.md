@@ -17,7 +17,7 @@ You are a top-level orchestrator running in the terminal at the repo root. You a
 
 | Step | Tool | Reason |
 |---|---|---|
-| 0. Clarify (`/clarify` skill) | **Claude Code** | Reads codebase and asks only unanswerable questions; interactive loop with user |
+| 0. Clarify (`/clarify` skill) | **Codex CLI (GPT-5.2)** | Reads codebase and asks only unanswerable questions; interactive loop with user |
 | 1. Spec (`/spec` skill) | **Codex CLI (GPT-5.2)** | Strong structured reasoning, codebase-aware spec generation |
 | 2. Worktree creation | **Claude Code** | Repo-aware, safe git ops |
 | 3. Planning | **Codex CLI** | Diff-minimization and plan discipline |
@@ -95,12 +95,12 @@ Each tool reads its input artifact from disk and writes its output artifact to d
 
 ---
 
-### Step 0 — Clarify (Claude Code, interactive loop)
+### Step 0 — Clarify (Codex, interactive loop)
 
 Run the `/clarify` skill up to 3 rounds. Each round reads the ticket (plus any accumulated answers from previous rounds) and checks whether anything is genuinely unclear that cannot be inferred from the codebase.
 
 ```bash
-claude -p "/clarify <ticket-plus-answers>"
+codex exec "/clarify <ticket-plus-answers>"
 ```
 
 **After each round:**

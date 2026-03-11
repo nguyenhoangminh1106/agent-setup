@@ -32,6 +32,10 @@ After editing skills locally, push and re-run `./install.sh` on other machines.
 3. Add the skill to the skills list in `CLAUDE.md` and add a section for it in `README.md`.
 4. Commit, push, and re-run `install.sh` to deploy.
 
+## Working conventions
+
+- **"ticket skill"** means both `ticket.sh` (the shell pipeline) and `skills/ticket.md` (the skill definition). Any change to ticket behavior must be applied to both files.
+
 ## Core philosophy (reflected in all skills)
 
 - Safety > cleverness; read-only unless explicitly permitted

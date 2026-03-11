@@ -108,11 +108,11 @@ TEMPLATE
   fi
 fi
 
-# ── Step 0 — Clarify (Claude Code, interactive loop) ──────────────────────────
+# ── Step 0 — Clarify (Codex, interactive loop) ────────────────────────────────
 # Run up to 3 rounds. Each round runs the /clarify skill with the ticket + any
 # accumulated answers. If it outputs CLARIFY:DONE (or no questions remain after
 # 3 rounds), continue. User answers are appended to TICKET for the next round.
-step 0 "Clarify (Claude Code)"
+step 0 "Clarify (Codex)"
 
 CLARIFY_INPUT="$TICKET"
 for CLARIFY_ROUND in 1 2 3; do
@@ -121,7 +121,7 @@ for CLARIFY_ROUND in 1 2 3; do
   CLARIFY_IN_FILE="$ARTIFACTS_ROOT/.clarify-input.tmp"
   CLARIFY_OUT="$ARTIFACTS_ROOT/.clarify-${CLARIFY_ROUND}.tmp"
   printf '%s' "$CLARIFY_INPUT" > "$CLARIFY_IN_FILE"
-  claude --dangerously-skip-permissions -p "/clarify $CLARIFY_IN_FILE" | tee "$CLARIFY_OUT"
+  codex_run "/clarify $CLARIFY_IN_FILE" | tee "$CLARIFY_OUT"
 
   if grep -q "CLARIFY:DONE" "$CLARIFY_OUT"; then
     echo ""
