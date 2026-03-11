@@ -70,10 +70,10 @@ codex_run() {
   fi
 }
 
-# codex_plan: runs Codex from the REPO root — text output only, no worktree write access
+# codex_plan: runs Codex in read-only sandbox — cannot write any files
 # Use for planning/analysis steps (clarify, spec, plan, reviews) where Codex must NOT write code
 codex_plan() {
-  codex exec --full-auto -C "$REPO" "$1"
+  codex exec -s read-only -C "$REPO" "$1"
 }
 
 # ── Pre-fetch: resolve ticket URLs to full text before any subprocess runs ────
