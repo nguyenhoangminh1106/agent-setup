@@ -40,6 +40,7 @@ After editing skills locally, push and re-run `./install.sh` on other machines.
 ## Working conventions
 
 - **"ticket skill"** means both `ticket.sh` (the shell pipeline) and `skills/ticket.md` (the skill definition). Any change to ticket behavior must be applied to both files.
+- **Update `README.md`** whenever there are significant changes: new skills, removed skills, pipeline step changes, structural changes, or new usage patterns. Do NOT update it for minor fixes, internal refactors, or changes with no user-facing impact.
 
 ## Core philosophy (reflected in all skills)
 

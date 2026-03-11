@@ -1,7 +1,7 @@
 # agent-setup
 
-A lightweight, copy-pasteable **agent skills registry** for Claude Code, OpenAI Codex, and Cursor.  
-This repo is designed to be **deterministic, safe, and auditable**: every skill is plain Markdown, versioned in Git, and installed locally into each agent’s command/prompt directory.
+A lightweight **agent skills registry** for Claude Code, OpenAI Codex, and Cursor.
+Every skill is plain Markdown, versioned in Git, and installed locally into each agent's command directory.
 
 ---
 
@@ -20,25 +20,17 @@ This repo is designed to be **deterministic, safe, and auditable**: every skill 
 ```text
 agent-setup/
 ├── skills/
-│   ├── commit-push.md
-│   ├── pr-triage.md
-│   ├── branch-risk-review.md
-│   ├── worktree-create.md
-│   ├── worktree-remove.md
-│   ├── clean-ai-comments.md
-│   ├── ticket.md
-│   └── spec.md
-├── install.sh
-├── ticket.sh
+│   ├── git/          # commit-push, name-branch, worktree-create, worktree-remove
+│   ├── review/       # branch-risk-review, clean-ai-comments, pr-description, pr-triage
+│   ├── ticket/       # clarify, spec, ticket
+│   ├── project/      # daily-update, feature-summary, testing-instructions
+│   └── data/         # db-unsync-fix, query-db
+├── install.sh        # installs all skills flat into ~/.claude/commands/, ~/.codex/prompts/, ~/.cursor/commands/
+├── ticket.sh         # terminal CLI orchestrator for the full ticket pipeline
 └── README.md
 ```
 
-* `skills/`
-  Each file defines **one agent skill** in Markdown.
-* `install.sh`
-  Installs all skills into Claude, Codex, and Cursor.
-* `README.md`
-  Documentation and usage.
+Skills are organised into subfolders in the repo for clarity, but installed **flat** so `/skill-name` references work identically in all tools.
 
 ---
 
@@ -56,12 +48,12 @@ cd agent-setup
 bash install.sh
 ```
 
-This installs skills to:
+Installs skills to:
 
-* **Claude Code** → `~/.claude/commands/`
-* **OpenAI Codex** → `~/.codex/prompts/`
-* **Cursor** → `~/.cursor/commands/`
-* **Terminal CLI** → `~/bin/ticket` (the real multi-agent orchestrator)
+- **Claude Code** → `~/.claude/commands/`
+- **OpenAI Codex** → `~/.codex/prompts/`
+- **Cursor** → `~/.cursor/commands/`
+- **Terminal CLI** → `~/bin/ticket`
 
 Make sure `~/bin` is in your PATH:
 
@@ -71,271 +63,143 @@ export PATH="$HOME/bin:$PATH"  # add to ~/.zshrc or ~/.bashrc
 
 ---
 
-## Available Skills
+## Skills
 
-### `commit-push`
+### Git
 
-Safely stage, commit, and push changes.
+#### `commit-push`
+Stage, commit (Conventional Commits format), and push in one step. Never force-pushes. Handles pre-commit hook failures minimally.
 
-* Summarises diffs before committing
-* Asks for confirmation
-* Never force-pushes unless explicitly approved
+#### `name-branch`
+Generate a well-formatted git branch name (`feat/`, `fix/`, `chore/` + kebab-case, ≤50 chars) from any ticket or plain-English description. Used internally by `worktree-create` and the ticket pipeline.
 
----
+#### `worktree-create`
+Create or reuse a git worktree. Always places worktrees at `ROOT/.claude/worktrees/<branch>`. Infers branch name via `/name-branch` if not provided. Asks for confirmation once (skippable with `yes=true`).
 
-### `pr-triage`
-
-Review pull requests with engineering focus.
-
-* Risk assessment
-* Change classification
-* Reviewer guidance
+#### `worktree-remove`
+Safely remove a git worktree by branch name or path. Detects uncommitted changes. Optionally deletes the branch after removal (ask-first). Never force-removes without approval.
 
 ---
 
-### `branch-risk-review`
+### Review
 
-Evaluate branch safety before merge.
+#### `branch-risk-review`
+Read-only risk review of a branch or PR diff. Classifies findings as BLOCKER / FIX / NOTE. Checks behavioral safety, consistency with existing code, diff size, and simplicity. Does not edit code.
 
-* Detects large diffs
-* Flags risky patterns
-* Encourages incremental merges
+#### `clean-ai-comments`
+Remove noisy, redundant AI-generated comments from the current branch diff only. Never touches pre-existing code. Keeps meaningful comments (WHY, gotchas, links).
 
----
+#### `pr-description`
+Write a plain-English PR description for non-technical readers. Covers all main changes in 1–3 sentences, no jargon.
 
-### `worktree-create`
-
-Create or reuse a **Git worktree** safely.
-
-**What it does**
-
-* Detects local vs remote branches
-* Reuses existing worktrees when possible
-* Creates new branches only when approved
-* Places worktrees inside the project root:
-
-  * `.claude/worktrees/`
-  * `.codex/worktrees/`
-  * `.cursor/worktrees/`
-    (auto-detected, asks if none exist)
-
-**Safety rules**
-
-* Read-only inspection first
-* Explicit confirmation before:
-
-  * creating branches
-  * adding worktrees
-  * creating directories
+#### `pr-triage`
+Read-only PR triage. Auto-resolves bot threads (style/false-alarm/low-risk). Reports human threads without replying.
 
 ---
 
-### `worktree-remove`
+### Ticket
 
-Safely remove a Git worktree.
+#### `clarify`
+Read a ticket and the codebase, then ask only questions that cannot be answered from existing code. Outputs `CLARIFY:DONE` if nothing is unclear, or `CLARIFY:QUESTIONS` with a minimal list. Used as Step 0 of the ticket pipeline.
 
-**What it does**
+#### `spec`
+Turn raw ticket input into a clean, codebase-aware requirement spec. Studies existing patterns before writing a single line. Outputs to stdout — the caller handles file saving.
 
-* Accepts a branch name or worktree path
-* Refuses to remove the main working tree
-* Detects uncommitted changes
-* Supports optional branch deletion (ask-first)
+#### `ticket`
+The top-level multi-agent pipeline. Takes a ticket and runs end-to-end — from branch naming and clarification through to a committed, pushed, review-ready branch.
 
-**Safety rules**
-
-* No force removal without explicit approval
-* No remote branch deletion unless explicitly requested
+See [Ticket Pipeline](#ticket-pipeline) below for full details.
 
 ---
 
-### `clean-ai-comments`
+### Project
 
-Remove noisy, redundant AI-generated comments from new code only.
+#### `daily-update`
+Generate a daily work update from Slack (Beeper), Linear, GitHub, and Claude Code session logs. Matches past entry style, shows draft for approval, then appends to the updates file.
 
-* Only touches lines introduced in the current branch diff
-* Removes comments that restate the obvious (e.g. `// increment counter` above `count++`)
-* Keeps meaningful comments: WHY explanations, gotchas, links, directives
-* Reports every removed line before finishing
+#### `feature-summary`
+Summarize all changes on a branch (committed + uncommitted), explain the business purpose, and produce step-by-step UI testing instructions.
 
-### `spec`
-
-Turn raw user input into a clean, codebase-aware requirement spec.
-
-**What it does**
-
-* Reads everything the user provides: ticket text, chat history, context dumps, decisions
-* Studies the existing codebase to understand patterns, conventions, and what already exists
-* Produces a spec that describes the smallest change needed to satisfy the intent
-* Prefers reusing existing code over introducing new abstractions
-* Saves the output to `.ticket/spec.md` for use by downstream skills (e.g. `ticket`)
-
-**Usage**
-
-```
-/spec "Add a logout button to the nav"
-/spec 142
-/spec "Here's the whole chat + context from our planning session..."
-```
-
-Can be used standalone before a planning session, or as the first step of `/ticket`.
+#### `testing-instructions`
+Given a branch diff and optional DB access, produce concrete step-by-step UI testing instructions with real example data.
 
 ---
 
-### `ticket`
+### Data
 
-The top-level orchestrator. Takes a ticket and runs an end-to-end multi-agent pipeline — from spec to merged-ready branch — without human involvement during execution.
+#### `query-db`
+Accept a plain-English question, figure out the right read-only query, run it, and return a clear answer. Never mutates data.
 
-This is not a single-agent prompt. It dispatches `codex` and `claude` as separate subprocess calls from the terminal, using each tool for what it does best. Artifacts are saved to disk between steps so nothing is ever passed as stale in-memory content.
+#### `db-unsync-fix`
+When Prisma detects schema drift from migrations run on another branch, generate the manual SQL to revert those changes so you can run migrations cleanly on the current branch.
 
 ---
 
-**Usage**
+## Ticket Pipeline
 
-Run `ticket` from the repo root in your terminal (requires `codex` and `claude` CLIs both installed):
+The `ticket` command is a terminal orchestrator. It dispatches `codex` and `claude` as separate subprocess calls, using each for what it does best.
+
+### Usage
 
 ```bash
-# Paste ticket text inline
-ticket "Add a logout button to the top nav that clears the session and redirects to /login"
-
-# GitHub issue number
-ticket 142
-
-# GitHub issue URL
+ticket "Add a logout button that clears session and redirects to /login"
+ticket 142                         # GitHub issue number
 ticket https://github.com/org/repo/issues/142
-
-# Optional: specify branch name or repo path
-ticket 142 branch=fix/logout-button repo=/path/to/repo
+ticket branch=fix/my-branch        # resume an existing branch
 ```
 
-> **Note:** Running `/ticket` inside Claude Code or Codex will execute all steps with that single tool.
-> For true multi-agent execution (Codex for spec/planning/review, Claude for code/git), use the `ticket` CLI from your terminal.
+Requirements: `codex` and `claude` CLIs both installed and in PATH.
 
-**Requirements**
-
-Both CLIs must be installed and in PATH:
-- `claude` — Claude Code CLI (`claude -p` headless mode used internally)
-- `codex` — OpenAI Codex CLI (`codex exec --ask-for-approval never` used internally)
-
----
-
-**Execution model**
-
-`/ticket` is a terminal orchestrator — not running inside Claude Code or Codex. It dispatches both as peers:
-
-```
-terminal (/ticket)
-├── codex "/spec ..."              → .ticket/spec.md
-├── claude "/worktree-create ..."  → isolated branch + worktree
-├── codex "plan from spec..."      → .ticket/plan.md
-├── claude "implement plan..."     → code changes in worktree
-├── [up to 3 rounds]
-│   ├── git diff → .ticket/diff-current.md       (fresh each round)
-│   ├── codex "review diff vs spec..."   → .ticket/risk-N.md
-│   └── claude "apply BLOCKER+FIX..."
-├── claude "/clean-ai-comments"
-├── claude "/commit-push"
-├── codex "final report..."        → printed to terminal + compare URL
-└── claude "/worktree-remove ..."  → local worktree removed, branch kept on remote
-```
-
----
-
-**Step-by-step breakdown**
+### Pipeline steps
 
 | # | Step | Tool | What happens |
 |---|---|---|---|
-| 1 | Spec | **Codex (GPT-5.2)** via `/spec` skill | Reads ticket + codebase, produces a codebase-aligned requirement spec. Saved to `spec.md`. |
-| 2 | Worktree | **Claude Code** via `/worktree-create` | Creates an isolated branch and worktree. All code changes happen here — never on `main`. |
-| 3 | Plan | **Codex (GPT-5.2)** | Reads `spec.md`, produces a minimal-diff execution plan: files to touch, files to skip, DB changes (only if unavoidable). Saved to `plan.md`. |
-| 4 | Implement | **Claude Code** | Executes `plan.md` file-by-file. Matches existing patterns. No new dependencies or abstractions unless the spec explicitly requires them. |
-| 5 | Risk review | **Codex** reviews, **Claude Code** fixes (×3 max) | Each round: captures a fresh diff from disk, Codex reviews it against `spec.md`, Claude applies only BLOCKER and FIX items. Skips `*.sql` and `migrations/` — those are written by humans. |
-| 6 | Cleanup | **Claude Code** via `/clean-ai-comments` | Removes noisy AI-generated comments added in this branch only. |
-| 7 | Commit | **Claude Code** via `/commit-push` | Commits with a Conventional Commits message tied to the ticket ID. Pushes. No `--no-verify`. |
-| 8 | Report | **Codex** drafts, terminal prints | Final report: Summary, Ticket alignment, Risk verdict, How to test (UI steps), Technical notes, GitHub compare URL. |
-| 9 | Cleanup | **Claude Code** via `/worktree-remove` | Removes the local worktree directory. Branch is preserved on the remote — nothing is deleted. |
+| 0a | Branch name | **Codex** via `/name-branch` | Derives a clean branch name from the ticket before anything else |
+| 0 | Clarify | **Codex** via `/clarify` | Reads codebase, asks only unanswerable questions. Interactive loop up to 3 rounds |
+| 1 | Spec | **Codex** via `/spec` | Reads ticket + codebase, produces a minimal requirement spec |
+| 2 | Worktree | **Claude** via `/worktree-create` | Creates an isolated branch + worktree. All changes happen here |
+| 3 | Plan | **Codex** | Reads spec, produces minimal-diff execution plan |
+| 4 | Implement | **Claude** | Executes plan. Matches existing patterns, no unnecessary abstractions |
+| 4b | Spec review | **Codex** reviews, **Claude** fixes (×3 max) | Verifies implementation matches spec. Applies BLOCKER + FIX items only |
+| 5 | Risk review | **Claude** reviews + fixes (×3 max) | Checks for regressions, scope drift, data risk |
+| 6 | Cleanup | **Claude** via `/clean-ai-comments` | Removes noisy AI comments from diff |
+| 7 | Commit | **Claude** via `/commit-push` | Conventional Commits message, no `--no-verify` |
+| 8 | Report | **Claude** via `/feature-summary` | Summary, business purpose, UI test steps, compare URL |
+| 9 | Worktree cleanup | bash | Removes local worktree. Branch preserved on remote |
 
----
+### Artifacts
 
-**Artifact files**
-
-All intermediate outputs are saved to `.ticket/` in the repo:
+All intermediate outputs saved to `.ticket/<branch>/`:
 
 | File | Written by | Read by |
 |---|---|---|
-| `spec.md` | Step 1 (Codex / `/spec`) | Steps 3, 5, 8 |
-| `plan.md` | Step 3 (Codex) | Step 4 |
-| `diff-current.md` | Step 5a (git diff, fresh each round) | Step 5b (Codex) |
-| `risk-1.md` … `risk-3.md` | Step 5b (Codex) | Step 5c (Claude), Step 8 |
+| `spec.md` | Step 1 | Steps 3, 4b, 5, 8 |
+| `plan.md` | Step 3 | Step 4 |
+| `diff-current.md` | Steps 4b, 5 (fresh each round) | Review steps |
+| `spec-review-N.md` | Step 4b | Step 4b fix |
+| `risk-N.md` | Step 5 | Step 5 fix |
+| `report.md` | Step 8 | Human |
 
-Each tool reads from disk — never from a previous tool's in-memory state.
+### Safety guarantees
 
----
-
-**Safety guarantees**
-
-* No destructive git commands (`--force`, `reset --hard`, `clean -f`, `branch -D`)
-* No force pushes — ever
-* No database migrations generated or executed
-* No changes to `main` or `master`
-* Never exceeds ticket scope — scope drift is a BLOCKER in every risk review round
-* Silent failures are not allowed — every error surfaces immediately and stops the pipeline
+- No destructive git commands (`--force`, `reset --hard`, `clean -f`, `branch -D`)
+- No force pushes — ever
+- No database migrations generated or executed
+- No changes to `main` or `master`
+- Scope drift is a BLOCKER in every review round
+- Silent failures are not allowed — every error stops the pipeline immediately
 
 ---
 
-**What you get at the end**
+## Adding a New Skill
 
-* A clean branch with a single well-described commit
-* A GitHub compare URL ready to open as a PR
-* A structured report covering: what was done and why, how each acceptance criterion was met, the final risk verdict, step-by-step UI test instructions, and any deferred work or known limitations
-* A clean local workspace — the worktree is removed automatically, branch stays on the remote
-
-The human's only job is to read the report, test in the UI, and decide whether to merge.
-
-## Design Rules for All Skills
-
-Every skill must follow these principles:
-
-1. **Plan → Ask → Execute**
-2. **No silent side effects**
-3. **No guessing**
-4. **Prefer reuse over creation**
-5. **Never destroy without consent**
-
-If a skill violates these rules, it should not live in this repo.
-
----
-
-## Updating / Adding Skills
-
-1. Create or edit a file in `skills/`
-2. Commit and push
-3. Re-run `install.sh` locally
-
-Example:
-
-```bash
-git checkout -b feat/new-skill
-vim skills/my-skill.md
-git commit -am "Add my-skill"
-git push
-```
-
----
-
-## Intended Use
-
-This repo is built for:
-
-* Agent-assisted engineering
-* Multi-worktree development
-* Deterministic workflows
-* Humans who want **control**, not automation chaos
-
-If you want hidden magic, this is not for you.
+1. Create `skills/<subfolder>/<name>.md` with YAML frontmatter and instructions.
+2. Add `"<name>:<subfolder>/<name>.md"` to the `SKILLS` array in `install.sh`.
+3. Update `CLAUDE.md` skills list and add a section to this README.
+4. Commit, push, re-run `install.sh` on other machines.
 
 ---
 
 ## License
 
 MIT — use it, fork it, adapt it.
-Just keep your workflows honest.
