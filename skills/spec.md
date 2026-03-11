@@ -73,35 +73,6 @@ Anything unclear that a human must decide before implementation begins.
 
 ---
 
-**4) Save artifact**
+**4) Display**
 
-Derive the branch name (same as Step 6) and save to a branch-scoped folder so runs never overwrite each other:
-```
-mkdir -p .ticket/<branch>
-```
-Save the spec content to `.ticket/<branch>/spec.md`.
-
-**5) Display**
-
-Print the full spec to the user.
-
-**6) Print the terminal command — THIS STEP IS MANDATORY**
-
-Derive a kebab-case branch name from the Goal line:
-- Use `feat/` for new features, `fix/` for bug fixes, `chore/` for maintenance
-- Lowercase, hyphens only, max 50 chars
-
-Then print EXACTLY this block as the very last thing in your response, with the real branch name substituted in:
-
-```
-─────────────────────────────────────────────
-✅ Spec saved to .ticket/<derived-branch-name>/spec.md
-
-Run in your terminal to continue:
-
-  ticket --skip-spec branch=<derived-branch-name>
-
-─────────────────────────────────────────────
-```
-
-Do not skip this. Do not summarise it. Print the full block with the exact `ticket` command on its own line.
+Print the full spec to the user. That's it — do not save any files. The caller (ticket skill or user) handles persistence.

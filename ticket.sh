@@ -201,13 +201,11 @@ if [[ -s "$ARTIFACTS/spec.md" ]]; then
   echo "Step 1 — Spec: skipped (using existing $ARTIFACTS/spec.md)"
 else
   step 1 "Spec (Codex)"
-  # Run spec with live output; the /spec skill saves to .ticket/<branch>/spec.md
-  # and prints "branch=<name>" at the end (used as confirmation, branch already known).
-  SPEC_OUTPUT_TMP="$ARTIFACTS/spec-output.tmp"
-  codex_run "/spec $TICKET" | tee "$SPEC_OUTPUT_TMP"
-  rm -f "$SPEC_OUTPUT_TMP"
+  # Run spec and capture output to spec.md. The /spec skill just prints the spec;
+  # ticket.sh owns the file saving.
+  codex_run "/spec $TICKET" | tee "$ARTIFACTS/spec.md"
 
-  [[ -s "$ARTIFACTS/spec.md" ]] || die "spec.md not found at $ARTIFACTS/spec.md — codex /spec did not save it"
+  [[ -s "$ARTIFACTS/spec.md" ]] || die "spec.md is empty — codex /spec may have failed"
   echo "Spec saved to $ARTIFACTS/spec.md"
 fi
 
