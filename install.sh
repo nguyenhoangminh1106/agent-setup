@@ -66,8 +66,65 @@ else
   echo "WARNING: failed to download ticket.sh — skipping CLI install" >&2
 fi
 
+# ── API keys setup ─────────────────────────────────────────────────────────────
+# Detect shell profile file
+SHELL_PROFILE=""
+if [[ -f "$HOME/.zshrc" ]]; then
+  SHELL_PROFILE="$HOME/.zshrc"
+elif [[ -f "$HOME/.bashrc" ]]; then
+  SHELL_PROFILE="$HOME/.bashrc"
+elif [[ -f "$HOME/.bash_profile" ]]; then
+  SHELL_PROFILE="$HOME/.bash_profile"
+fi
+
+setup_api_key() {
+  local key_name="$1"
+  local description="$2"
+  local get_url="$3"
+
+  # Check if already set in environment or profile
+  if [[ -n "${!key_name:-}" ]]; then
+    echo "  ✓ $key_name already set in environment — skipping."
+    return
+  fi
+  if [[ -n "$SHELL_PROFILE" ]] && grep -q "export $key_name=" "$SHELL_PROFILE" 2>/dev/null; then
+    echo "  ✓ $key_name already in $SHELL_PROFILE — skipping."
+    return
+  fi
+
+  echo ""
+  echo "  $description"
+  echo "  Get yours at: $get_url"
+  printf "  Enter $key_name (or press Enter to skip): "
+  read -r key_value </dev/tty
+
+  if [[ -n "$key_value" ]]; then
+    if [[ -n "$SHELL_PROFILE" ]]; then
+      echo "export $key_name=\"$key_value\"" >> "$SHELL_PROFILE"
+      echo "  ✓ Saved to $SHELL_PROFILE"
+    else
+      echo "  ⚠ No shell profile found. Add this manually:"
+      echo "    export $key_name=\"$key_value\""
+    fi
+    export "$key_name=$key_value"
+  else
+    echo "  Skipped. Some ticket features will fall back to URL-only context."
+  fi
+}
+
+echo ""
+echo "── API Keys (used as fallback when MCP is unavailable) ──────────────────"
+setup_api_key "LINEAR_API_KEY" \
+  "Linear API key — enables fetching issue body for the ticket pipeline." \
+  "https://linear.app/settings/api"
+
+# ── Summary ───────────────────────────────────────────────────────────────────
 echo ""
 echo "Installed agent skills (all tools, all skills):"
 echo " - Claude : ${SKILL_NAMES[*]}"
 echo " - Codex  : ${SKILL_NAMES[*]}"
 echo " - Cursor : ${SKILL_NAMES[*]}"
+echo ""
+if [[ -n "$SHELL_PROFILE" ]]; then
+  echo "Run 'source $SHELL_PROFILE' or open a new terminal to apply env changes."
+fi
