@@ -117,10 +117,17 @@ if [[ -z "$TICKET" && -z "$BRANCH" ]]; then
 
 TEMPLATE
 
-  # prefer VS Code, fall back to $EDITOR, then nano
+  # prefer VS Code (check common macOS paths too), fall back to $EDITOR, then nano
+  CODE_BIN=""
   if command -v code &>/dev/null; then
+    CODE_BIN="code"
+  elif [[ -x "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" ]]; then
+    CODE_BIN="/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
+  fi
+
+  if [[ -n "$CODE_BIN" ]]; then
     echo "Opening VS Code — paste your ticket, save, and close the tab to continue..."
-    code --wait "$INPUT_FILE"
+    "$CODE_BIN" --wait "$INPUT_FILE"
   elif [[ -n "${EDITOR:-}" ]]; then
     echo "Opening $EDITOR — paste your ticket, save and exit to continue..."
     "$EDITOR" "$INPUT_FILE"
