@@ -112,19 +112,22 @@ fi
 # Auto-skip if spec already exists for this branch (ARTIFACTS already set above).
 if [[ -z "${ARTIFACTS:-}" ]]; then
   step 1 "Spec (Codex)"
-  SPEC_TMP="$ARTIFACTS_ROOT/.spec-tmp.md"
-  codex_run "/spec $TICKET" > "$SPEC_TMP"
-  [[ -s "$SPEC_TMP" ]] || die "spec output is empty — codex /spec failed"
+  # Run the spec skill with live output (tee to temp so we can parse the branch name).
+  # The /spec skill saves the file itself to .ticket/<branch>/spec.md and prints
+  # "ticket --skip-spec branch=<branch>" at the end — we parse that to get the branch.
+  SPEC_OUTPUT_TMP="$ARTIFACTS_ROOT/.spec-output.tmp"
+  codex_run "/spec $TICKET" | tee "$SPEC_OUTPUT_TMP"
 
-  # Derive branch name from spec if not provided
+  # Derive branch name from the skill's own output line: "branch=<name>"
   if [[ -z "$BRANCH" ]]; then
-    GOAL=$(grep -m1 "^##* Goal" "$SPEC_TMP" -A1 | tail -1 | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9 ]//g' | tr ' ' '-' | cut -c1-50)
-    BRANCH="feat/${GOAL:-ticket-$(date +%s)}"
+    BRANCH=$(grep -oE 'branch=[^ ]+' "$SPEC_OUTPUT_TMP" | tail -1 | sed 's/branch=//')
   fi
+  rm -f "$SPEC_OUTPUT_TMP"
+
+  [[ -n "$BRANCH" ]] || die "Could not determine branch name from spec output — codex /spec may have failed"
 
   ARTIFACTS="$ARTIFACTS_ROOT/$BRANCH"
-  mkdir -p "$ARTIFACTS"
-  mv "$SPEC_TMP" "$ARTIFACTS/spec.md"
+  [[ -s "$ARTIFACTS/spec.md" ]] || die "spec.md not found at $ARTIFACTS/spec.md — codex /spec did not save it"
   echo "Spec saved to $ARTIFACTS/spec.md"
 else
   echo "Step 1 — Spec: skipped (using existing $ARTIFACTS/spec.md)"

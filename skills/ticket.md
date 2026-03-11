@@ -109,10 +109,13 @@ Otherwise, print the progress banner then run:
 ════════════════════════════════════════
 ```
 ```bash
-codex exec "/spec {{ticket}}"
+codex exec "/spec {{ticket}}" | tee /tmp/spec-output.tmp
 ```
 
-Output is saved to `.ticket/<branch>/spec.md` by the `spec` skill.
+The `/spec` skill saves the file itself to `.ticket/<branch>/spec.md` and prints `branch=<name>` in its final terminal command line. After the command exits:
+- Parse the branch name from the output: `grep -oE 'branch=[^ ]+' /tmp/spec-output.tmp | tail -1 | sed 's/branch=//'`
+- Verify `.ticket/<branch>/spec.md` exists and is non-empty — if not, STOP and report.
+- Do NOT redirect the spec output to a temp file (this hides live output and loses the file the skill saves).
 
 ---
 
