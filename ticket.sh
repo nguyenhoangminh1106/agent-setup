@@ -61,13 +61,19 @@ claude_run() {
   fi
 }
 
-# codex_run: runs Codex non-interactively in the worktree directory
+# codex_run: runs Codex non-interactively in the worktree directory (for implementation steps)
 codex_run() {
   if [[ -n "$WORKTREE" ]]; then
     codex exec --full-auto -C "$WORKTREE" "$1"
   else
     codex exec --full-auto "$1"
   fi
+}
+
+# codex_plan: runs Codex from the REPO root — text output only, no worktree write access
+# Use for planning/analysis steps (clarify, spec, plan, reviews) where Codex must NOT write code
+codex_plan() {
+  codex exec --full-auto -C "$REPO" "$1"
 }
 
 # ── Pre-fetch: resolve ticket URLs to full text before any subprocess runs ────
@@ -193,7 +199,7 @@ else
     CLARIFY_IN_FILE="$ARTIFACTS/clarify-input.tmp"
     CLARIFY_OUT="$ARTIFACTS/clarify-${CLARIFY_ROUND}.tmp"
     printf '%s' "$CLARIFY_INPUT" > "$CLARIFY_IN_FILE"
-    codex_run "/clarify $CLARIFY_IN_FILE" | tee "$CLARIFY_OUT"
+    codex_plan "/clarify $CLARIFY_IN_FILE" | tee "$CLARIFY_OUT"
 
     if grep -q "CLARIFY:DONE" "$CLARIFY_OUT"; then
       echo ""
@@ -252,7 +258,7 @@ else
   step 1 "Spec (Codex)"
   # Run spec and capture output to spec.md. The /spec skill just prints the spec;
   # ticket.sh owns the file saving.
-  codex_run "/spec $TICKET" | tee "$ARTIFACTS/spec.md"
+  codex_plan "/spec $TICKET" | tee "$ARTIFACTS/spec.md"
 
   [[ -s "$ARTIFACTS/spec.md" ]] || die "spec.md is empty — codex /spec may have failed"
   echo "Spec saved to $ARTIFACTS/spec.md"
@@ -310,7 +316,7 @@ if [[ -s "$ARTIFACTS/plan.md" ]]; then
 else
   step 3 "Plan (Codex)"
 
-  codex_run "You are a software planner. Produce a minimal-diff Execution Plan.
+  codex_plan "You are a software planner. Produce a minimal-diff Execution Plan.
 
 Read the spec from disk: $ARTIFACTS/spec.md
 
@@ -377,7 +383,7 @@ for ROUND in 1 2 3; do
   fi
 
   # 4b-ii: Codex reviews spec alignment
-  codex_run "You are a spec compliance reviewer. Check whether the implementation satisfies every requirement in the spec.
+  codex_plan "You are a spec compliance reviewer. Check whether the implementation satisfies every requirement in the spec.
 
 Read both artifacts fresh from disk:
 - Spec: $ARTIFACTS/spec.md
