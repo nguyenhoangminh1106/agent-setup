@@ -71,13 +71,7 @@ codex_run() {
 }
 
 # ── Input: open editor if no ticket provided ───────────────────────────────────
-# If branch is given and spec already exists, we can skip input entirely.
-if [[ -n "$BRANCH" && -s "$ARTIFACTS_ROOT/$BRANCH/spec.md" ]]; then
-  ARTIFACTS="$ARTIFACTS_ROOT/$BRANCH"
-  echo "Found existing spec at $ARTIFACTS/spec.md — skipping input and spec generation."
-elif [[ -n "$BRANCH" ]]; then
-  : # branch given but no spec yet — skip editor, let Step 1 generate spec
-elif [[ -z "$TICKET" ]]; then
+if [[ -z "$TICKET" && -z "$BRANCH" ]]; then
   INPUT_FILE="$(mktemp /tmp/ticket-input.XXXXXX.md)"
 
   cat > "$INPUT_FILE" <<'TEMPLATE'
@@ -108,96 +102,114 @@ TEMPLATE
   fi
 fi
 
+# ── Step 0a — Branch Name (Codex via /name-branch skill) ─────────────────────
+# Resolve branch name early so all artifacts are namespaced correctly from the start.
+# Skip if branch was provided as an argument.
+if [[ -z "$BRANCH" ]]; then
+  step "0a" "Branch Name (Codex)"
+  NAME_IN_FILE="$ARTIFACTS_ROOT/.name-branch-input.tmp"
+  NAME_OUT_FILE="$ARTIFACTS_ROOT/.name-branch-output.tmp"
+  printf '%s' "$TICKET" > "$NAME_IN_FILE"
+  codex_run "/name-branch $NAME_IN_FILE" | tee "$NAME_OUT_FILE"
+  BRANCH=$(grep -oE 'BRANCH:[^ ]+' "$NAME_OUT_FILE" | tail -1 | sed 's/BRANCH://')
+  rm -f "$NAME_IN_FILE" "$NAME_OUT_FILE"
+  [[ -n "$BRANCH" ]] || die "Could not determine branch name — codex /name-branch may have failed"
+  echo "Branch name: $BRANCH"
+fi
+
+# Now that BRANCH is known, check if spec already exists (resume case)
+if [[ -s "$ARTIFACTS_ROOT/$BRANCH/spec.md" ]]; then
+  ARTIFACTS="$ARTIFACTS_ROOT/$BRANCH"
+  echo "Found existing spec at $ARTIFACTS/spec.md — skipping clarify and spec."
+fi
+
+# Emit branch name for dashboard display
+echo "[BRANCH:${BRANCH}]"
+
+# Ensure artifacts directory exists for this branch
+ARTIFACTS="${ARTIFACTS:-$ARTIFACTS_ROOT/$BRANCH}"
+mkdir -p "$ARTIFACTS"
+
 # ── Step 0 — Clarify (Codex, interactive loop) ────────────────────────────────
-# Run up to 3 rounds. Each round runs the /clarify skill with the ticket + any
-# accumulated answers. If it outputs CLARIFY:DONE (or no questions remain after
-# 3 rounds), continue. User answers are appended to TICKET for the next round.
-step 0 "Clarify (Codex)"
+# Skip if we already have a spec (resume case).
+if [[ -s "$ARTIFACTS/spec.md" ]]; then
+  echo "Step 0 — Clarify: skipped (existing spec found)"
+else
+  step 0 "Clarify (Codex)"
 
-CLARIFY_INPUT="$TICKET"
-for CLARIFY_ROUND in 1 2 3; do
-  echo "[STEP:0] Clarify round ${CLARIFY_ROUND}/3"
+  CLARIFY_INPUT="$TICKET"
+  for CLARIFY_ROUND in 1 2 3; do
+    echo "[STEP:0] Clarify round ${CLARIFY_ROUND}/3"
 
-  CLARIFY_IN_FILE="$ARTIFACTS_ROOT/.clarify-input.tmp"
-  CLARIFY_OUT="$ARTIFACTS_ROOT/.clarify-${CLARIFY_ROUND}.tmp"
-  printf '%s' "$CLARIFY_INPUT" > "$CLARIFY_IN_FILE"
-  codex_run "/clarify $CLARIFY_IN_FILE" | tee "$CLARIFY_OUT"
+    CLARIFY_IN_FILE="$ARTIFACTS/clarify-input.tmp"
+    CLARIFY_OUT="$ARTIFACTS/clarify-${CLARIFY_ROUND}.tmp"
+    printf '%s' "$CLARIFY_INPUT" > "$CLARIFY_IN_FILE"
+    codex_run "/clarify $CLARIFY_IN_FILE" | tee "$CLARIFY_OUT"
 
-  if grep -q "CLARIFY:DONE" "$CLARIFY_OUT"; then
+    if grep -q "CLARIFY:DONE" "$CLARIFY_OUT"; then
+      echo ""
+      echo "✓ Step 0 — Clarify: nothing unclear. Proceeding."
+      rm -f "$CLARIFY_OUT" "$CLARIFY_IN_FILE"
+      break
+    fi
+
+    if ! grep -q "CLARIFY:QUESTIONS" "$CLARIFY_OUT"; then
+      echo "  (No questions detected — assuming clear. Proceeding.)"
+      rm -f "$CLARIFY_OUT" "$CLARIFY_IN_FILE"
+      break
+    fi
+
+    # Print the questions and prompt the user for answers
     echo ""
-    echo "✓ Step 0 — Clarify: nothing unclear. Proceeding."
-    rm -f "$CLARIFY_OUT"
-    break
-  fi
+    echo "─────────────────────────────────────────────"
+    echo "Please answer the questions above."
+    echo "Type your answers (press Enter twice when done):"
+    echo "─────────────────────────────────────────────"
+    USER_ANSWERS=""
+    while IFS= read -r line; do
+      [[ -z "$line" && -z "$USER_ANSWERS" ]] && continue   # skip leading blank
+      [[ -z "$line" ]] && break                             # blank line = done
+      USER_ANSWERS="${USER_ANSWERS}${line}"$'\n'
+    done
 
-  if ! grep -q "CLARIFY:QUESTIONS" "$CLARIFY_OUT"; then
-    echo "  (No questions detected — assuming clear. Proceeding.)"
-    rm -f "$CLARIFY_OUT"
-    break
-  fi
+    if [[ -z "$USER_ANSWERS" ]]; then
+      echo "  (No answers provided — skipping remaining clarify rounds.)"
+      rm -f "$CLARIFY_OUT" "$CLARIFY_IN_FILE"
+      break
+    fi
 
-  # Print the questions and prompt the user for answers
-  echo ""
-  echo "─────────────────────────────────────────────"
-  echo "Please answer the questions above."
-  echo "Type your answers (press Enter twice when done):"
-  echo "─────────────────────────────────────────────"
-  USER_ANSWERS=""
-  while IFS= read -r line; do
-    [[ -z "$line" && -z "$USER_ANSWERS" ]] && continue   # skip leading blank
-    [[ -z "$line" ]] && break                             # blank line = done
-    USER_ANSWERS="${USER_ANSWERS}${line}"$'\n'
-  done
-
-  if [[ -z "$USER_ANSWERS" ]]; then
-    echo "  (No answers provided — skipping remaining clarify rounds.)"
-    rm -f "$CLARIFY_OUT"
-    break
-  fi
-
-  # Append answers to the input for the next round
-  CLARIFY_INPUT="${CLARIFY_INPUT}
+    # Append answers to the input for the next round
+    CLARIFY_INPUT="${CLARIFY_INPUT}
 
 ## Answers (round ${CLARIFY_ROUND})
 ${USER_ANSWERS}"
 
-  rm -f "$CLARIFY_OUT"
+    rm -f "$CLARIFY_OUT" "$CLARIFY_IN_FILE"
 
-  if [[ "$CLARIFY_ROUND" -eq 3 ]]; then
-    echo "  (Max clarify rounds reached — proceeding with available answers.)"
-  fi
-done
+    if [[ "$CLARIFY_ROUND" -eq 3 ]]; then
+      echo "  (Max clarify rounds reached — proceeding with available answers.)"
+    fi
+  done
 
-# Propagate accumulated answers into TICKET so spec also gets them
-TICKET="$CLARIFY_INPUT"
-rm -f "$ARTIFACTS_ROOT/.clarify-input.tmp"
+  # Propagate accumulated answers into TICKET so spec also gets them
+  TICKET="$CLARIFY_INPUT"
+fi
 
 # ── Step 1 — Spec (Codex via /spec skill) ─────────────────────────────────────
-# Auto-skip if spec already exists for this branch (ARTIFACTS already set above).
-if [[ -z "${ARTIFACTS:-}" ]]; then
+# Auto-skip if spec already exists for this branch.
+if [[ -s "$ARTIFACTS/spec.md" ]]; then
+  echo "Step 1 — Spec: skipped (using existing $ARTIFACTS/spec.md)"
+else
   step 1 "Spec (Codex)"
-  # Run the spec skill with live output (tee to temp so we can parse the branch name).
-  # The /spec skill saves the file itself to .ticket/<branch>/spec.md and prints
-  # "ticket --skip-spec branch=<branch>" at the end — we parse that to get the branch.
-  SPEC_OUTPUT_TMP="$ARTIFACTS_ROOT/.spec-output.tmp"
+  # Run spec with live output; the /spec skill saves to .ticket/<branch>/spec.md
+  # and prints "branch=<name>" at the end (used as confirmation, branch already known).
+  SPEC_OUTPUT_TMP="$ARTIFACTS/spec-output.tmp"
   codex_run "/spec $TICKET" | tee "$SPEC_OUTPUT_TMP"
-
-  # Derive branch name from the skill's own output line: "branch=<name>"
-  if [[ -z "$BRANCH" ]]; then
-    BRANCH=$(grep -oE 'branch=[^ ]+' "$SPEC_OUTPUT_TMP" | tail -1 | sed 's/branch=//')
-  fi
   rm -f "$SPEC_OUTPUT_TMP"
 
-  [[ -n "$BRANCH" ]] || die "Could not determine branch name from spec output — codex /spec may have failed"
-
-  ARTIFACTS="$ARTIFACTS_ROOT/$BRANCH"
   [[ -s "$ARTIFACTS/spec.md" ]] || die "spec.md not found at $ARTIFACTS/spec.md — codex /spec did not save it"
   echo "Spec saved to $ARTIFACTS/spec.md"
-else
-  echo "Step 1 — Spec: skipped (using existing $ARTIFACTS/spec.md)"
 fi
-# Emit branch name for dashboard display
-echo "[BRANCH:${BRANCH}]"
 
 # ── Step 2 — Worktree (Claude Code) ───────────────────────────────────────────
 step 2 "Worktree (Claude Code)"

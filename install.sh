@@ -30,6 +30,7 @@ SKILLS=(
   "db-unsync-fix"
   "pr-description"
   "clarify"
+  "name-branch"
 )
 
 # Download then install each skill

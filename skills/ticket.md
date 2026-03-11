@@ -17,6 +17,7 @@ You are a top-level orchestrator running in the terminal at the repo root. You a
 
 | Step | Tool | Reason |
 |---|---|---|
+| 0a. Branch name (`/name-branch` skill) | **Codex CLI (GPT-5.2)** | Derives branch name early so all artifacts are namespaced correctly from the start |
 | 0. Clarify (`/clarify` skill) | **Codex CLI (GPT-5.2)** | Reads codebase and asks only unanswerable questions; interactive loop with user |
 | 1. Spec (`/spec` skill) | **Codex CLI (GPT-5.2)** | Strong structured reasoning, codebase-aware spec generation |
 | 2. Worktree creation | **Claude Code** | Repo-aware, safe git ops |
@@ -92,6 +93,19 @@ Each tool reads its input artifact from disk and writes its output artifact to d
 **CRITICAL — never inline large artifacts as shell variables.** Always pass artifact paths to the tool and let the tool read them. Inlining large files via `$VAR` expansion hits shell `ARG_MAX` limits and can OOM the process.
 
 ## Steps
+
+---
+
+### Step 0a — Branch Name (Codex)
+
+Resolve the branch name before anything else so all artifacts are namespaced correctly.
+
+- If `{{branch}}` was provided: use it. Skip this step.
+- Otherwise, run:
+  ```bash
+  codex exec "/name-branch <ticket-input-file>"
+  ```
+  Parse `BRANCH:<name>` from the output. All subsequent artifacts go to `.ticket/<branch>/`.
 
 ---
 

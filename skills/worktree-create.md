@@ -37,10 +37,11 @@ Always use `ROOT/.claude/worktrees`. Create it silently in step 7 if it doesn't 
 
 **3) Decide branch name** (no confirmation needed unless truly unclear)
 - If `{{branch}}` provided: use it as-is.
-- Else: infer from the user's message — extract the intent, generate one kebab-case name.
-  - Example: "add login page" → `feat/add-login-page`
-  - Example: "fix null pointer in checkout" → `fix/null-pointer-checkout`
-- Only ask if the message is so vague that no reasonable name can be inferred.
+- Else: run the `/name-branch` skill with the user's message as context and use the returned `BRANCH:<name>` value.
+  ```
+  /name-branch <user message>
+  ```
+- Only ask if `/name-branch` cannot produce a reasonable name (extremely vague input).
 
 **4) Fetch and inspect** (read-only, no confirmation)
 ```
