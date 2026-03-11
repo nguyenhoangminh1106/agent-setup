@@ -70,6 +70,43 @@ codex_run() {
   fi
 }
 
+# ── Pre-fetch: resolve ticket URLs to full text before any subprocess runs ────
+# Subprocesses (codex, claude headless) don't inherit MCP connections, so we
+# fetch ticket content here in the shell and pass it as plain text downstream.
+if [[ "$TICKET" == *"linear.app"* ]]; then
+  ISSUE_ID=$(echo "$TICKET" | grep -oiE '[A-Z]+-[0-9]+' | head -1)
+  if [[ -n "$ISSUE_ID" && -n "${LINEAR_API_KEY:-}" ]]; then
+    echo "Fetching Linear issue $ISSUE_ID..."
+    LINEAR_BODY=$(curl -s -X POST https://api.linear.app/graphql \
+      -H "Authorization: $LINEAR_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d "{\"query\":\"{ issue(id: \\\"$ISSUE_ID\\\") { title description comments { nodes { body } } } }\"}" \
+      2>/dev/null)
+    ISSUE_TITLE=$(echo "$LINEAR_BODY" | grep -o '"title":"[^"]*"' | head -1 | sed 's/"title":"//;s/"//')
+    ISSUE_DESC=$(echo "$LINEAR_BODY" | grep -o '"description":"[^"]*"' | head -1 | sed 's/"description":"//;s/"//' | sed 's/\\n/\n/g')
+    if [[ -n "$ISSUE_TITLE" ]]; then
+      TICKET="$ISSUE_ID: $ISSUE_TITLE
+
+$ISSUE_DESC
+
+Original URL: $TICKET"
+      echo "Fetched: $ISSUE_ID — $ISSUE_TITLE"
+    else
+      echo "Warning: Could not fetch Linear issue body (LINEAR_API_KEY set but request failed). Using URL as context."
+    fi
+  elif [[ -n "$ISSUE_ID" ]]; then
+    echo "Warning: LINEAR_API_KEY not set — cannot fetch issue body. Set it in your shell profile for full ticket context."
+    echo "Using URL slug as context: $TICKET"
+  fi
+elif [[ "$TICKET" =~ ^[0-9]+$ ]] || [[ "$TICKET" == *"github.com"* ]]; then
+  echo "Fetching GitHub issue..."
+  GH_BODY=$(gh issue view "$TICKET" --json title,body,comments 2>/dev/null)
+  if [[ -n "$GH_BODY" ]]; then
+    TICKET="$GH_BODY"
+    echo "GitHub issue fetched."
+  fi
+fi
+
 # ── Input: open editor if no ticket provided ───────────────────────────────────
 if [[ -z "$TICKET" && -z "$BRANCH" ]]; then
   INPUT_FILE="$(mktemp /tmp/ticket-input.XXXXXX.md)"

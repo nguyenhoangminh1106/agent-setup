@@ -28,7 +28,7 @@ Read the ticket and the existing codebase. Identify only the things that are gen
 Read `{{ticket}}` in full. Detect the input type and fetch accordingly:
 - **File path** (starts with `/` or `./`): read the file from disk.
 - **GitHub issue number or URL** (`github.com` or bare number): `gh issue view {{ticket}} --json title,body,labels,assignees,comments`
-- **Linear URL** (`linear.app/...`): extract the issue ID from the URL (e.g. `ENG-5618`). Fetch using the Linear MCP tool (already connected). If MCP is unavailable, proceed with the URL slug as context.
+- **Linear URL** (`linear.app/...`): the ticket pipeline pre-fetches Linear issue content before invoking this skill, so the input will already contain the issue title and description as plain text. Use it as-is.
 - **Plain text**: use as-is.
 
 If the input contains a previous round of Q&A (`## Answers`), treat those answers as resolved context — do not re-ask answered questions.
