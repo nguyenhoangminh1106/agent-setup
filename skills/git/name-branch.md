@@ -11,12 +11,13 @@ Read the context and produce exactly one valid git branch name. Nothing else.
 
 ## Rules
 
-- Use the correct prefix: `feat/` for new features, `fix/` for bug fixes, `chore/` for maintenance/tooling/refactors.
-- Kebab-case only — lowercase letters, numbers, hyphens. No slashes except the prefix separator.
-- Max 50 characters total (including prefix).
-- Be descriptive but concise — capture the core intent in 3–5 words.
-- If the context is a file path, read the file from disk first.
-- Do NOT output anything except the final line: `BRANCH:<name>`
+- **Follow the repo's existing branch naming convention.** Run `git branch --all --format='%(refname:short)' | head -30` and match the pattern used (e.g. `minh2/eng-<num>-<slug>`, `feat/<slug>`, etc).
+- If the context contains a Linear or GitHub ticket number (e.g. `ENG-5618`), include it in the name: `<user>/eng-<num>-<short-slug>`.
+- Kebab-case only — lowercase letters, numbers, hyphens. No extra slashes.
+- **Max 50 characters total.** Truncate the slug if needed — never exceed this.
+- Be concise — 3–5 words for the slug is enough.
+- If the context is a file path (starts with `/` or `./`), read the file from disk first.
+- **Output ONLY the final `BRANCH:<name>` line to stdout. Nothing else. No explanation, no markdown, no extra lines.**
 
 ## Steps
 
@@ -24,23 +25,30 @@ Read the context and produce exactly one valid git branch name. Nothing else.
 
 If `{{context}}` starts with `/` or `./`, read the file from disk. Otherwise treat it as inline text.
 
-**2) Extract the intent**
+**2) Check existing branch convention**
 
-Identify what is being built or fixed in one phrase. Ignore implementation details.
+```
+git branch --all --format='%(refname:short)' | head -30
+```
+
+Identify the naming pattern in use (prefix, ticket inclusion, user prefix, etc).
 
 **3) Generate the branch name**
 
-Apply the rules above. Examples:
-- "Add dark mode toggle to settings page" → `feat/dark-mode-toggle`
-- "Fix null pointer crash on checkout" → `fix/null-pointer-checkout`
-- "Upgrade dependencies and clean up lint warnings" → `chore/upgrade-deps-lint-cleanup`
-- "Linear ticket ENG-142: user can export invoices as PDF" → `feat/export-invoices-pdf`
+Apply the rules:
+- Match the repo's convention
+- Include ticket number if present (lowercase, e.g. `eng-5618`)
+- Truncate slug so total length ≤ 50 chars
+- Examples:
+  - Repo uses `minh2/eng-NNN-slug` + ticket ENG-5618 "show AI bubble" → `minh2/eng-5618-show-ai-bubble`
+  - Repo uses `feat/slug`, new feature "dark mode toggle" → `feat/dark-mode-toggle`
+  - Fix ticket ENG-142 "null pointer on checkout" → `fix/eng-142-null-pointer-checkout`
 
 **4) Output**
 
-Print exactly one line:
+Print exactly one line to stdout:
 ```
 BRANCH:<name>
 ```
 
-No explanation. No markdown. No extra lines.
+No other output. No trailing newline issues. Just that one line.

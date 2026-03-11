@@ -111,7 +111,12 @@ if [[ -z "$BRANCH" ]]; then
   NAME_OUT_FILE="$ARTIFACTS_ROOT/.name-branch-output.tmp"
   printf '%s' "$TICKET" > "$NAME_IN_FILE"
   claude_run "/name-branch $NAME_IN_FILE" | tee "$NAME_OUT_FILE"
+  # Primary: parse BRANCH:<name> from stdout
   BRANCH=$(grep -oE 'BRANCH:[^ ]+' "$NAME_OUT_FILE" | tail -1 | sed 's/BRANCH://')
+  # Fallback: if skill wrote bare branch name to file without BRANCH: prefix
+  if [[ -z "$BRANCH" && -s "$NAME_OUT_FILE" ]]; then
+    BRANCH=$(grep -vE '^\s*$' "$NAME_OUT_FILE" | tail -1 | tr -d '[:space:]')
+  fi
   rm -f "$NAME_IN_FILE" "$NAME_OUT_FILE"
   [[ -n "$BRANCH" ]] || die "Could not determine branch name — claude /name-branch may have failed"
   echo "Branch name: $BRANCH"
