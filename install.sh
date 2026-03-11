@@ -29,6 +29,7 @@ SKILLS=(
   "daily-update"
   "db-unsync-fix"
   "pr-description"
+  "clarify"
 )
 
 # Download then install each skill
