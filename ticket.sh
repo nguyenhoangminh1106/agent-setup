@@ -108,6 +108,70 @@ TEMPLATE
   fi
 fi
 
+# ── Step 0 — Clarify (Claude Code, interactive loop) ──────────────────────────
+# Run up to 3 rounds. Each round runs the /clarify skill with the ticket + any
+# accumulated answers. If it outputs CLARIFY:DONE (or no questions remain after
+# 3 rounds), continue. User answers are appended to TICKET for the next round.
+step 0 "Clarify (Claude Code)"
+
+CLARIFY_INPUT="$TICKET"
+for CLARIFY_ROUND in 1 2 3; do
+  echo "[STEP:0] Clarify round ${CLARIFY_ROUND}/3"
+
+  CLARIFY_IN_FILE="$ARTIFACTS_ROOT/.clarify-input.tmp"
+  CLARIFY_OUT="$ARTIFACTS_ROOT/.clarify-${CLARIFY_ROUND}.tmp"
+  printf '%s' "$CLARIFY_INPUT" > "$CLARIFY_IN_FILE"
+  claude --dangerously-skip-permissions -p "/clarify $CLARIFY_IN_FILE" | tee "$CLARIFY_OUT"
+
+  if grep -q "CLARIFY:DONE" "$CLARIFY_OUT"; then
+    echo ""
+    echo "✓ Step 0 — Clarify: nothing unclear. Proceeding."
+    rm -f "$CLARIFY_OUT"
+    break
+  fi
+
+  if ! grep -q "CLARIFY:QUESTIONS" "$CLARIFY_OUT"; then
+    echo "  (No questions detected — assuming clear. Proceeding.)"
+    rm -f "$CLARIFY_OUT"
+    break
+  fi
+
+  # Print the questions and prompt the user for answers
+  echo ""
+  echo "─────────────────────────────────────────────"
+  echo "Please answer the questions above."
+  echo "Type your answers (press Enter twice when done):"
+  echo "─────────────────────────────────────────────"
+  USER_ANSWERS=""
+  while IFS= read -r line; do
+    [[ -z "$line" && -z "$USER_ANSWERS" ]] && continue   # skip leading blank
+    [[ -z "$line" ]] && break                             # blank line = done
+    USER_ANSWERS="${USER_ANSWERS}${line}"$'\n'
+  done
+
+  if [[ -z "$USER_ANSWERS" ]]; then
+    echo "  (No answers provided — skipping remaining clarify rounds.)"
+    rm -f "$CLARIFY_OUT"
+    break
+  fi
+
+  # Append answers to the input for the next round
+  CLARIFY_INPUT="${CLARIFY_INPUT}
+
+## Answers (round ${CLARIFY_ROUND})
+${USER_ANSWERS}"
+
+  rm -f "$CLARIFY_OUT"
+
+  if [[ "$CLARIFY_ROUND" -eq 3 ]]; then
+    echo "  (Max clarify rounds reached — proceeding with available answers.)"
+  fi
+done
+
+# Propagate accumulated answers into TICKET so spec also gets them
+TICKET="$CLARIFY_INPUT"
+rm -f "$ARTIFACTS_ROOT/.clarify-input.tmp"
+
 # ── Step 1 — Spec (Codex via /spec skill) ─────────────────────────────────────
 # Auto-skip if spec already exists for this branch (ARTIFACTS already set above).
 if [[ -z "${ARTIFACTS:-}" ]]; then

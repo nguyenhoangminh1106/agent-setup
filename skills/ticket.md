@@ -17,6 +17,7 @@ You are a top-level orchestrator running in the terminal at the repo root. You a
 
 | Step | Tool | Reason |
 |---|---|---|
+| 0. Clarify (`/clarify` skill) | **Claude Code** | Reads codebase and asks only unanswerable questions; interactive loop with user |
 | 1. Spec (`/spec` skill) | **Codex CLI (GPT-5.2)** | Strong structured reasoning, codebase-aware spec generation |
 | 2. Worktree creation | **Claude Code** | Repo-aware, safe git ops |
 | 3. Planning | **Codex CLI** | Diff-minimization and plan discipline |
@@ -91,6 +92,24 @@ Each tool reads its input artifact from disk and writes its output artifact to d
 **CRITICAL — never inline large artifacts as shell variables.** Always pass artifact paths to the tool and let the tool read them. Inlining large files via `$VAR` expansion hits shell `ARG_MAX` limits and can OOM the process.
 
 ## Steps
+
+---
+
+### Step 0 — Clarify (Claude Code, interactive loop)
+
+Run the `/clarify` skill up to 3 rounds. Each round reads the ticket (plus any accumulated answers from previous rounds) and checks whether anything is genuinely unclear that cannot be inferred from the codebase.
+
+```bash
+claude -p "/clarify <ticket-plus-answers>"
+```
+
+**After each round:**
+- If output contains `CLARIFY:DONE` → proceed to Step 1.
+- If output contains `CLARIFY:QUESTIONS` → print the questions to the terminal, read the user's answers interactively, append them to the ticket input as `## Answers (round N)`, and re-run.
+- If the user provides no answers → stop clarify loop and proceed.
+- After round 3 → proceed regardless.
+
+Pass the full accumulated ticket + answers as `{{ticket}}` to Step 1 so the spec has all context.
 
 ---
 
