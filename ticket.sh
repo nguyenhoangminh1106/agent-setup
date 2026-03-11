@@ -102,18 +102,18 @@ TEMPLATE
   fi
 fi
 
-# ── Step 0a — Branch Name (Codex via /name-branch skill) ─────────────────────
+# ── Step 0a — Branch Name (Claude via /name-branch skill) ────────────────────
 # Resolve branch name early so all artifacts are namespaced correctly from the start.
 # Skip if branch was provided as an argument.
 if [[ -z "$BRANCH" ]]; then
-  step "0a" "Branch Name (Codex)"
+  step "0a" "Branch Name (Claude)"
   NAME_IN_FILE="$ARTIFACTS_ROOT/.name-branch-input.tmp"
   NAME_OUT_FILE="$ARTIFACTS_ROOT/.name-branch-output.tmp"
   printf '%s' "$TICKET" > "$NAME_IN_FILE"
-  codex_run "/name-branch $NAME_IN_FILE" | tee "$NAME_OUT_FILE"
+  claude_run "/name-branch $NAME_IN_FILE" | tee "$NAME_OUT_FILE"
   BRANCH=$(grep -oE 'BRANCH:[^ ]+' "$NAME_OUT_FILE" | tail -1 | sed 's/BRANCH://')
   rm -f "$NAME_IN_FILE" "$NAME_OUT_FILE"
-  [[ -n "$BRANCH" ]] || die "Could not determine branch name — codex /name-branch may have failed"
+  [[ -n "$BRANCH" ]] || die "Could not determine branch name — claude /name-branch may have failed"
   echo "Branch name: $BRANCH"
 fi
 
