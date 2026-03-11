@@ -13,39 +13,45 @@ mkdir -p \
   "$HOME/.codex/prompts" \
   "$HOME/.cursor/commands"
 
-# Skills list
+# Skills: "name:subfolder/name.md"
+# Installed to ~/.claude/commands/<name>.md (flat) — subfolder is repo-only organisation.
 SKILLS=(
-  "commit-push"
-  "pr-triage"
-  "branch-risk-review"
-  "worktree-create"
-  "worktree-remove"
-  "clean-ai-comments"
-  "ticket"
-  "spec"
-  "feature-summary"
-  "testing-instructions"
-  "query-db"
-  "daily-update"
-  "db-unsync-fix"
-  "pr-description"
-  "clarify"
-  "name-branch"
+  "commit-push:git/commit-push.md"
+  "name-branch:git/name-branch.md"
+  "worktree-create:git/worktree-create.md"
+  "worktree-remove:git/worktree-remove.md"
+  "branch-risk-review:review/branch-risk-review.md"
+  "clean-ai-comments:review/clean-ai-comments.md"
+  "pr-description:review/pr-description.md"
+  "pr-triage:review/pr-triage.md"
+  "clarify:ticket/clarify.md"
+  "spec:ticket/spec.md"
+  "ticket:ticket/ticket.md"
+  "daily-update:project/daily-update.md"
+  "feature-summary:project/feature-summary.md"
+  "testing-instructions:project/testing-instructions.md"
+  "db-unsync-fix:data/db-unsync-fix.md"
+  "query-db:data/query-db.md"
 )
 
+SKILL_NAMES=()
+
 # Download then install each skill
-for s in "${SKILLS[@]}"; do
-  curl -fsSL "$REPO_RAW/skills/${s}.md" -o "$TMP_DIR/${s}.md"
-  if [[ ! -s "$TMP_DIR/${s}.md" ]]; then
-    echo "ERROR: failed to download skills/${s}.md" >&2
+for entry in "${SKILLS[@]}"; do
+  name="${entry%%:*}"
+  path="${entry##*:}"
+  SKILL_NAMES+=("$name")
+  curl -fsSL "$REPO_RAW/skills/${path}" -o "$TMP_DIR/${name}.md"
+  if [[ ! -s "$TMP_DIR/${name}.md" ]]; then
+    echo "ERROR: failed to download skills/${path}" >&2
     exit 1
   fi
-  rm -f "$HOME/.claude/commands/${s}.md"
-  rm -f "$HOME/.codex/prompts/${s}.md"
-  rm -f "$HOME/.cursor/commands/${s}.md"
-  cp "$TMP_DIR/${s}.md" "$HOME/.claude/commands/${s}.md"
-  cp "$TMP_DIR/${s}.md" "$HOME/.codex/prompts/${s}.md"
-  cp "$TMP_DIR/${s}.md" "$HOME/.cursor/commands/${s}.md"
+  rm -f "$HOME/.claude/commands/${name}.md"
+  rm -f "$HOME/.codex/prompts/${name}.md"
+  rm -f "$HOME/.cursor/commands/${name}.md"
+  cp "$TMP_DIR/${name}.md" "$HOME/.claude/commands/${name}.md"
+  cp "$TMP_DIR/${name}.md" "$HOME/.codex/prompts/${name}.md"
+  cp "$TMP_DIR/${name}.md" "$HOME/.cursor/commands/${name}.md"
 done
 
 # Install ticket.sh as a global CLI command
@@ -62,6 +68,6 @@ fi
 
 echo ""
 echo "Installed agent skills (all tools, all skills):"
-echo " - Claude : ${SKILLS[*]}"
-echo " - Codex  : ${SKILLS[*]}"
-echo " - Cursor : ${SKILLS[*]}"
+echo " - Claude : ${SKILL_NAMES[*]}"
+echo " - Codex  : ${SKILL_NAMES[*]}"
+echo " - Cursor : ${SKILL_NAMES[*]}"
