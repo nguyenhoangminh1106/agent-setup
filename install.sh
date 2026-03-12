@@ -27,6 +27,7 @@ SKILLS=(
   "linear-fetch:ticket/linear-fetch.md"
   "clarify:ticket/clarify.md"
   "spec:ticket/spec.md"
+  "fix-review:ticket/fix-review.md"
   "ticket:ticket/ticket.md"
   "daily-update:project/daily-update.md"
   "feature-summary:project/feature-summary.md"
