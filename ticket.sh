@@ -413,7 +413,7 @@ Explicitly check:
   echo "  Spec review saved to $ARTIFACTS/spec-review-${ROUND}.md"
 
   # Check for BLOCKERs or FIXes
-  if ! grep -qiE "^-?\s*(BLOCKER|FIX):" "$ARTIFACTS/spec-review-${ROUND}.md"; then
+  if ! grep -qiE "(BLOCKER|FIX)" "$ARTIFACTS/spec-review-${ROUND}.md"; then
     echo "  No BLOCKER or FIX items — exiting spec review loop early."
     break
   fi
@@ -425,7 +425,7 @@ Read the spec review from disk: $ARTIFACTS/spec-review-${ROUND}.md
 Read the spec from disk: $ARTIFACTS/spec.md"
 
   if [[ "$ROUND" -eq 3 ]]; then
-    if grep -qiE "^-?\s*BLOCKER:" "$ARTIFACTS/spec-review-${ROUND}.md"; then
+    if grep -qiE "BLOCKER" "$ARTIFACTS/spec-review-${ROUND}.md"; then
       die "Spec BLOCKERs still present after 3 rounds. Stopping — human review required."
     fi
   fi
@@ -476,7 +476,7 @@ Save your full review output to: $ARTIFACTS/risk-${ROUND}.md"
   echo "  Risk review saved to $ARTIFACTS/risk-${ROUND}.md"
 
   # Check for BLOCKERs or FIXes
-  if ! grep -qiE "^-?\s*(BLOCKER|FIX):" "$ARTIFACTS/risk-${ROUND}.md"; then
+  if ! grep -qiE "(BLOCKER|FIX)" "$ARTIFACTS/risk-${ROUND}.md"; then
     echo "  No BLOCKER or FIX items — exiting review loop early."
     break
   fi
@@ -487,7 +487,7 @@ Save your full review output to: $ARTIFACTS/risk-${ROUND}.md"
 Read the risk review from disk: $ARTIFACTS/risk-${ROUND}.md"
 
   if [[ "$ROUND" -eq 3 ]]; then
-    if grep -qiE "^-?\s*BLOCKER:" "$ARTIFACTS/risk-${ROUND}.md"; then
+    if grep -qiE "BLOCKER" "$ARTIFACTS/risk-${ROUND}.md"; then
       die "BLOCKERs still present after 3 rounds. Stopping — human review required."
     fi
   fi
