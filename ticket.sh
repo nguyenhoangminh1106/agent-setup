@@ -73,9 +73,20 @@ codex_run() {
 }
 
 # codex_plan: runs Codex in read-only sandbox — cannot write any files
-# Use for planning/analysis steps (clarify, spec, plan, reviews) where Codex must NOT write code
+# Use for pre-worktree steps (clarify, spec, plan) that read from the main repo
 codex_plan() {
   codex exec -s read-only -C "$REPO" "$1"
+}
+
+# codex_review: runs Codex in read-only sandbox inside the worktree
+# Use for post-implementation review steps (spec review, risk review) so Codex
+# reads the implemented files from the worktree, not the main branch
+codex_review() {
+  if [[ -n "$WORKTREE" ]]; then
+    codex exec -s read-only -C "$WORKTREE" "$1"
+  else
+    codex exec -s read-only -C "$REPO" "$1"
+  fi
 }
 
 # ── Pre-fetch: resolve ticket URLs to full text before any subprocess runs ────
@@ -392,8 +403,8 @@ for ROUND in 1 2 3; do
     break
   fi
 
-  # 4b-ii: Codex reviews spec alignment
-  codex_plan "You are a spec compliance reviewer. Check whether the implementation satisfies every requirement in the spec.
+  # 4b-ii: Codex reviews spec alignment (runs in worktree so it reads implemented files)
+  codex_review "You are a spec compliance reviewer. Check whether the implementation satisfies every requirement in the spec.
 
 Read both artifacts fresh from disk:
 - Spec: $ARTIFACTS/spec.md

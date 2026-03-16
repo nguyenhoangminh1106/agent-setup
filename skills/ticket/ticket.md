@@ -280,7 +280,8 @@ Print:
 ════════════════════════════════════════
 ```
 ```bash
-codex exec "You are a spec compliance reviewer. Check whether the implementation satisfies every requirement in the spec.
+# Run in the worktree so Codex reads the implemented files, not the main branch
+codex exec -s read-only -C <worktreePath> "You are a spec compliance reviewer. Check whether the implementation satisfies every requirement in the spec.
 
 Read both artifacts fresh from disk:
 - Spec: .ticket/<branch>/spec.md
