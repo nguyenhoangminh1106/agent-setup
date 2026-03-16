@@ -380,11 +380,11 @@ for ROUND in 1 2 3; do
   log "  Spec review round $ROUND / 3"
 
   # 4b-i: fresh diff (committed + uncommitted vs origin/main)
-  git fetch origin
+  git -C "$WORKTREE" fetch origin
   {
-    git diff origin/main...HEAD   # committed changes on branch
-    git diff HEAD                 # unstaged changes
-    git diff --cached             # staged changes
+    git -C "$WORKTREE" diff origin/main...HEAD   # committed changes on branch
+    git -C "$WORKTREE" diff HEAD                 # unstaged changes
+    git -C "$WORKTREE" diff --cached             # staged changes
   } > "$ARTIFACTS/diff-current.md"
 
   if [[ ! -s "$ARTIFACTS/diff-current.md" ]]; then
@@ -439,11 +439,11 @@ for ROUND in 1 2 3; do
   log "  Risk review round $ROUND / 3"
 
   # 5a: fresh diff (committed + uncommitted vs origin/main)
-  git fetch origin
+  git -C "$WORKTREE" fetch origin
   {
-    git diff origin/main...HEAD   # committed changes on branch
-    git diff HEAD                 # unstaged changes
-    git diff --cached             # staged changes
+    git -C "$WORKTREE" diff origin/main...HEAD   # committed changes on branch
+    git -C "$WORKTREE" diff HEAD                 # unstaged changes
+    git -C "$WORKTREE" diff --cached             # staged changes
   } > "$ARTIFACTS/diff-current.md"
 
   if [[ ! -s "$ARTIFACTS/diff-current.md" ]]; then
@@ -506,10 +506,9 @@ step 8 "Final Report (Claude Code)"
 
 claude_run "/feature-summary target=$BRANCH spec=$ARTIFACTS/spec.md db=skip" | tee "$ARTIFACTS/report.md"
 
-COMPARE_URL=$(gh pr view --json url --jq .url 2>/dev/null || {
-  base=$(git remote get-url origin | sed 's/\.git$//')
-  cur=$(git branch --show-current)
-  echo "${base}/compare/main...${cur}"
+COMPARE_URL=$(git -C "$WORKTREE" rev-parse --abbrev-ref HEAD 2>/dev/null | xargs -I{} gh pr view {} --json url --jq .url 2>/dev/null || {
+  base=$(git -C "$WORKTREE" remote get-url origin | sed 's/\.git$//')
+  echo "${base}/compare/main...${BRANCH}"
 })
 echo "" >> "$ARTIFACTS/report.md"
 echo "---" >> "$ARTIFACTS/report.md"

@@ -263,10 +263,10 @@ Print:
 ════════════════════════════════════════
 ```
 ```bash
-git fetch origin
-git diff origin/main...<branch> > .ticket/<branch>/diff-current.md   # committed
-git diff HEAD >> .ticket/<branch>/diff-current.md                      # unstaged
-git diff --cached >> .ticket/<branch>/diff-current.md                  # staged
+git -C <worktreePath> fetch origin
+git -C <worktreePath> diff origin/main...HEAD > .ticket/<branch>/diff-current.md   # committed
+git -C <worktreePath> diff HEAD >> .ticket/<branch>/diff-current.md                 # unstaged
+git -C <worktreePath> diff --cached >> .ticket/<branch>/diff-current.md             # staged
 ```
 If the diff is empty: STOP and report — no changes on branch.
 
@@ -336,10 +336,10 @@ Print:
 ════════════════════════════════════════
 ```
 ```bash
-git fetch origin
-git diff origin/main...<branch> > .ticket/<branch>/diff-current.md   # committed
-git diff HEAD >> .ticket/<branch>/diff-current.md                      # unstaged
-git diff --cached >> .ticket/<branch>/diff-current.md                  # staged
+git -C <worktreePath> fetch origin
+git -C <worktreePath> diff origin/main...HEAD > .ticket/<branch>/diff-current.md   # committed
+git -C <worktreePath> diff HEAD >> .ticket/<branch>/diff-current.md                 # unstaged
+git -C <worktreePath> diff --cached >> .ticket/<branch>/diff-current.md             # staged
 ```
 If the diff is empty: STOP and report — no changes on branch.
 
@@ -441,8 +441,8 @@ claude -p --output-format stream-json "/feature-summary target=<branch> spec=.ti
 
 Append the compare URL to the report file:
 ```bash
-COMPARE_URL=$(gh pr view --json url --jq .url 2>/dev/null || {
-  base=$(git remote get-url origin | sed 's/\.git$//')
+COMPARE_URL=$(gh pr view <branch> --json url --jq .url 2>/dev/null || {
+  base=$(git -C <worktreePath> remote get-url origin | sed 's/\.git$//')
   echo "${base}/compare/main...<branch>"
 })
 echo "" >> .ticket/<branch>/report.md
