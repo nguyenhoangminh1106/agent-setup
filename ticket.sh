@@ -501,6 +501,7 @@ Explicitly check:
     fi
 
     # Claude applies fixes then pushes
+    log "  Applying spec fixes (round $ROUND)..."
     claude_run "You are running inside the git worktree at: $WORKTREE
 All file reads and writes MUST use paths inside $WORKTREE only.
 
@@ -564,6 +565,7 @@ Save your full review output to: $ARTIFACTS/risk-${ROUND}.md"
     fi
 
     # Claude applies fixes then pushes
+    log "  Applying risk fixes (round $ROUND)..."
     claude_run "You are running inside the git worktree at: $WORKTREE
 All file reads and writes MUST use paths inside $WORKTREE only.
 
