@@ -23,13 +23,12 @@ You are a top-level orchestrator running in the terminal at the repo root. You a
 | 2. Worktree creation | **Claude Code** | Repo-aware, safe git ops |
 | 3. Planning | **Codex CLI** | Diff-minimization and plan discipline |
 | 4. Implementation | **Claude Code** | Safer code edits, repo-aware |
-| 4b. Spec review loop | **Codex CLI** | Re-validates implementation against spec before risk review |
-| 4c. Spec fix iterations | **Claude Code** | Controlled corrective edits from spec review |
-| 5. Risk review loop | **Claude Code** | Objective validation against ticket intent |
-| 5b. Fix iterations | **Claude Code** | Controlled corrective edits |
-| 6. AI comment cleanup | **Claude Code** | Comment-only edits |
-| 7. Commit and push | **Claude Code** | Repo-safe execution |
-| 8. Final report | **Claude Code** (feature-summary skill) | Summarizes changes, business purpose, and UI testing steps using spec as context |
+| 5. Commit and push | **Claude Code** | Push implementation before reviews so all review steps read from the remote branch |
+| 6. Spec review loop | **Codex CLI** | Re-validates implementation against spec; each fix round commits and pushes before next review |
+| 7. Risk review loop | **Claude Code** | Objective validation against ticket intent; each fix round commits and pushes before next review |
+| 8. AI comment cleanup + push | **Claude Code** | Comment-only edits, then push final state |
+| 9. Final report | **Claude Code** (feature-summary skill) | Summarizes changes, business purpose, and UI testing steps using spec as context |
+| 10. Worktree cleanup | **bash** | Remove local worktree; branch preserved on remote |
 
 ## Rules
 
@@ -230,15 +229,11 @@ Save output to `.ticket/<branch>/plan.md`.
 
 ### Step 4 — Implementation (Claude Code)
 
-Print the progress banner then run:
-```
-════════════════════════════════════════
-▶ Step 4 — Implementation  [tool: claude]
-   Executing plan — writing code changes in worktree
-════════════════════════════════════════
-```
 ```bash
-claude -p --output-format stream-json "Execute this plan inside the current worktree. Match existing code style and patterns. No new dependencies or abstractions unless the spec requires them. Do not touch files outside the plan.
+claude -p "You are running inside the git worktree at: <worktreePath>
+CRITICAL: All file reads and writes MUST use paths inside <worktreePath> only.
+
+Execute this plan. Match existing code style and patterns. No new dependencies or abstractions unless the spec requires them. Do not touch files outside the plan.
 
 Safety: no force push, no DROP/DELETE/ALTER TABLE/migrations, no changes to main or master. If any guard fires: STOP and report.
 
@@ -247,40 +242,32 @@ Read the plan from disk: .ticket/<branch>/plan.md"
 
 ---
 
-### Step 4b — Spec Review Loop (Codex reviews, Claude Code fixes)
+### Step 5 — Commit and Push initial implementation (Claude Code)
 
-Run up to 3 rounds. Each round re-reads the spec and the current diff to verify the implementation matches the spec intent.
+Push the implementation to the remote branch before any reviews, so all review steps read from a consistent pushed state.
+
+```bash
+claude -p "Run /commit-push to commit all changes and push to branch <branch>."
+```
+
+---
+
+### Step 6 — Spec Review Loop (Codex reviews, Claude Code fixes, push each round)
+
+Run up to 3 rounds. Each round reads the diff from the **pushed remote branch**, not local state. After fixes, push before the next round.
 
 **Each round:**
 
-**4b-i) Capture fresh diff**
-
-Print:
-```
-════════════════════════════════════════
-▶ Step 4b-i — Diff capture  [tool: bash]  (round <N>/3)
-   Fetching origin and diffing branch against main
-════════════════════════════════════════
-```
+**6-i) Capture diff from remote branch**
 ```bash
 git -C <worktreePath> fetch origin
-git -C <worktreePath> diff origin/main...HEAD > .ticket/<branch>/diff-current.md   # committed
-git -C <worktreePath> diff HEAD >> .ticket/<branch>/diff-current.md                 # unstaged
-git -C <worktreePath> diff --cached >> .ticket/<branch>/diff-current.md             # staged
+git -C <worktreePath> diff origin/main...origin/<branch> > .ticket/<branch>/diff-current.md
 ```
 If the diff is empty: STOP and report — no changes on branch.
 
-**4b-ii) Codex reviews spec alignment**
-
-Print:
-```
-════════════════════════════════════════
-▶ Step 4b-ii — Spec review  [tool: codex]  (round <N>/3)
-   Verifying implementation matches spec requirements
-════════════════════════════════════════
-```
+**6-ii) Codex reviews spec alignment**
 ```bash
-# Run in the worktree so Codex reads the implemented files, not the main branch
+# Run in the worktree so Codex reads the implemented files
 codex exec -s read-only -C <worktreePath> "You are a spec compliance reviewer. Check whether the implementation satisfies every requirement in the spec.
 
 Read both artifacts fresh from disk:
@@ -298,63 +285,41 @@ Explicitly check:
 - Are there any spec requirements not yet implemented?
 - Does anything in the diff contradict the spec?"
 ```
+Save output to `.ticket/<branch>/spec-review-<N>.md`. Exit loop early if no BLOCKER or FIX items.
 
-Save output to `.ticket/<branch>/spec-review-<N>.md`.
-
-**4b-iii) Claude Code applies fixes**
-
-Print:
-```
-════════════════════════════════════════
-▶ Step 4b-iii — Spec fix application  [tool: claude]  (round <N>/3)
-   Applying BLOCKER and FIX items from spec review
-════════════════════════════════════════
-```
+**6-iii) Claude Code applies fixes then pushes**
 ```bash
-claude -p --output-format stream-json "Apply only the BLOCKER and FIX items from the spec review. Minimal diffs only. No refactors. Ignore NOTE items.
+claude -p "You are running inside the git worktree at: <worktreePath>
+All file reads and writes MUST use paths inside <worktreePath> only.
+
+Apply only the BLOCKER and FIX items from the spec review. Minimal diffs only. No refactors. Ignore NOTE items.
 
 Read the spec review from disk: .ticket/<branch>/spec-review-<N>.md
 Read the spec from disk: .ticket/<branch>/spec.md"
+
+claude -p "Run /commit-push to push fixes."
 ```
 
-Exit the loop early if no BLOCKER or FIX items remain. After round 3, if BLOCKERs still exist: STOP and report.
+After round 3, if BLOCKERs still exist: STOP and report.
 
 ---
 
-### Step 5 — Risk Review Loop (Claude Code reviews and fixes)
+### Step 7 — Risk Review Loop (Claude Code reviews, fixes, push each round)
 
-Run up to 3 rounds. Each round uses a freshly captured diff — never reuse a diff from a prior round.
+Run up to 3 rounds. Each round reads the diff from the **pushed remote branch**.
 
 **Each round:**
 
-**5a) Capture fresh diff**
-
-Print:
-```
-════════════════════════════════════════
-▶ Step 5a — Diff capture  [tool: bash]  (round <N>/3)
-   Fetching origin and diffing branch against main
-════════════════════════════════════════
-```
+**7-i) Capture diff from remote branch**
 ```bash
 git -C <worktreePath> fetch origin
-git -C <worktreePath> diff origin/main...HEAD > .ticket/<branch>/diff-current.md   # committed
-git -C <worktreePath> diff HEAD >> .ticket/<branch>/diff-current.md                 # unstaged
-git -C <worktreePath> diff --cached >> .ticket/<branch>/diff-current.md             # staged
+git -C <worktreePath> diff origin/main...origin/<branch> > .ticket/<branch>/diff-current.md
 ```
 If the diff is empty: STOP and report — no changes on branch.
 
-**5b) Claude Code reviews**
-
-Print:
-```
-════════════════════════════════════════
-▶ Step 5b — Risk review  [tool: claude]  (round <N>/3)
-   Reviewing diff for blockers, regressions, and scope drift
-════════════════════════════════════════
-```
+**7-ii) Claude Code reviews**
 ```bash
-claude -p --output-format stream-json "You are a code risk reviewer. Review the diff against the spec.
+claude -p "You are a code risk reviewer. Review the diff against the spec.
 
 Read both artifacts fresh from disk:
 - Spec: .ticket/<branch>/spec.md
@@ -370,77 +335,45 @@ Explicitly check:
 - Diff size: any unnecessary files or lines changed?
 - DB/schema changes (skip *.sql and migrations/ — humans write those): any ORM model or schema change not strictly required? → BLOCKER if so.
 - Intent loss: does the implementation still match the spec goals?
-- Hidden data risk: any writes, deletes, or transforms on existing data rows?"
-```
+- Hidden data risk: any writes, deletes, or transforms on existing data rows?
 
-Save output to `.ticket/<branch>/risk-<N>.md`.
-
-**5c) Claude Code applies fixes**
-
-Print:
+Save your full review output to: .ticket/<branch>/risk-<N>.md"
 ```
-════════════════════════════════════════
-▶ Step 5c — Fix application  [tool: claude]  (round <N>/3)
-   Applying BLOCKER and FIX items from risk review
-════════════════════════════════════════
-```
+Exit loop early if no BLOCKER or FIX items.
+
+**7-iii) Claude Code applies fixes then pushes**
 ```bash
-claude -p --output-format stream-json "Apply only the BLOCKER and FIX items from the risk review. Minimal diffs only. No refactors. Ignore NOTE items.
+claude -p "You are running inside the git worktree at: <worktreePath>
+All file reads and writes MUST use paths inside <worktreePath> only.
+
+Apply only the BLOCKER and FIX items from the risk review. Minimal diffs only. No refactors. Ignore NOTE items.
 
 Read the risk review from disk: .ticket/<branch>/risk-<N>.md"
+
+claude -p "Run /commit-push to push fixes."
 ```
 
-Exit the loop early if no BLOCKER or FIX items remain. After round 3, if BLOCKERs still exist: STOP and report.
+After round 3, if BLOCKERs still exist: STOP and report.
 
 ---
 
-### Step 6 — AI Comment Cleanup (Claude Code)
+### Step 8 — AI Comment Cleanup then push (Claude Code)
 
-Print the progress banner then run:
-```
-════════════════════════════════════════
-▶ Step 6 — AI Comment Cleanup  [tool: claude]
-   Removing noisy AI-generated comments from diff
-════════════════════════════════════════
-```
 ```bash
-claude -p --output-format stream-json "/clean-ai-comments"
+claude -p "/clean-ai-comments"
+claude -p "Run /commit-push to push the comment cleanup."
 ```
 
 ---
 
-### Step 7 — Commit and Push (Claude Code)
+### Step 9 — Final Report (Claude Code via feature-summary skill)
 
-Print the progress banner then run:
-```
-════════════════════════════════════════
-▶ Step 7 — Commit and Push  [tool: claude]
-   Creating conventional commit and pushing branch
-════════════════════════════════════════
-```
 ```bash
-claude -p --output-format stream-json "/commit-push"
-```
-
-Commit message must follow Conventional Commits and include the ticket identifier if available (e.g. `feat: add login page (#42)`). No `--no-verify`. If a hook fails: fix minimally, retry once. If it fails again: STOP and report.
-
----
-
-### Step 8 — Final Report (Claude Code via feature-summary skill)
-
-Print the progress banner then run:
-```
-════════════════════════════════════════
-▶ Step 8 — Final Report  [tool: claude]
-   Summarizing changes, business purpose, and UI testing instructions
-════════════════════════════════════════
-```
-```bash
-claude -p --output-format stream-json "/feature-summary target=<branch> spec=.ticket/<branch>/spec.md db=skip" \
+claude -p "/feature-summary target=<branch> spec=.ticket/<branch>/spec.md db=skip" \
   | tee .ticket/<branch>/report.md
 ```
 
-Append the compare URL to the report file:
+Append the compare URL:
 ```bash
 COMPARE_URL=$(gh pr view <branch> --json url --jq .url 2>/dev/null || {
   base=$(git -C <worktreePath> remote get-url origin | sed 's/\.git$//')
@@ -451,21 +384,12 @@ echo "---" >> .ticket/<branch>/report.md
 echo "Compare: $COMPARE_URL" >> .ticket/<branch>/report.md
 ```
 
-The full report is saved to `.ticket/<branch>/report.md`.
-
 ---
 
-### Step 9 — Worktree Cleanup
+### Step 10 — Worktree Cleanup
 
 The worktree-remove skill is interactive (it asks "Proceed?") and will block when called headlessly. Run the removal directly instead:
 
-Print the progress banner then run:
-```
-════════════════════════════════════════
-▶ Step 9 — Worktree Cleanup  [tool: bash]
-   Removing local worktree directory (branch kept on remote)
-════════════════════════════════════════
-```
 ```bash
 cd <repo>
 git worktree remove "<worktreePath>" || git worktree remove --force "<worktreePath>"
@@ -476,5 +400,5 @@ Do NOT delete the branch. If the worktree directory does not exist, skip and log
 
 Print on success:
 ```
-✓ Step 9 — Worktree Cleanup complete  (worktree removed, branch <branch> preserved on remote)
+✓ Step 10 — Worktree Cleanup complete  (worktree removed, branch <branch> preserved on remote)
 ```

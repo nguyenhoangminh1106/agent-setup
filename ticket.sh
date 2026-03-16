@@ -375,6 +375,18 @@ Priorities (strict order):
   echo "Plan saved to $ARTIFACTS/plan.md"
 fi
 
+# ── Helper: commit and push all worktree changes ──────────────────────────────
+# Used after implementation and after each fix round so reviews always read from
+# the pushed branch, not local uncommitted state.
+push_worktree() {
+  local label="$1"
+  claude_run "You are running inside the git worktree at: $WORKTREE
+All file reads and writes MUST use paths inside $WORKTREE only.
+
+Run /commit-push to commit all uncommitted changes and push to branch $BRANCH.
+Commit message prefix: $label"
+}
+
 # ── Step 4 — Implementation (Claude Code) ─────────────────────────────────────
 step 4 "Implementation (Claude Code)"
 
@@ -388,27 +400,31 @@ Safety: no force push, no DROP/DELETE/ALTER TABLE/migrations, no changes to main
 
 Read the plan from disk: $ARTIFACTS/plan.md"
 
-# ── Step 4b — Spec Review Loop (Codex reviews, Claude fixes) ──────────────────
-step "4b" "Spec Review Loop (Codex reviews, Claude fixes)"
+# ── Step 5 — Commit and Push initial implementation ───────────────────────────
+step 5 "Commit and Push (Claude Code)"
+push_worktree "feat: implement"
+
+# ── Helper: capture diff from pushed remote branch ────────────────────────────
+capture_diff() {
+  git -C "$WORKTREE" fetch origin
+  git -C "$WORKTREE" diff origin/main...origin/"$BRANCH" > "$ARTIFACTS/diff-current.md"
+}
+
+# ── Step 6 — Spec Review Loop (Codex reviews, Claude fixes, push each round) ──
+step 6 "Spec Review Loop (Codex reviews, Claude fixes)"
 
 for ROUND in 1 2 3; do
-  echo "[STEP:4b] Spec review round ${ROUND}/3"
+  echo "[STEP:6] Spec review round ${ROUND}/3"
   log "  Spec review round $ROUND / 3"
 
-  # 4b-i: fresh diff (committed + uncommitted vs origin/main)
-  git -C "$WORKTREE" fetch origin
-  {
-    git -C "$WORKTREE" diff origin/main...HEAD   # committed changes on branch
-    git -C "$WORKTREE" diff HEAD                 # unstaged changes
-    git -C "$WORKTREE" diff --cached             # staged changes
-  } > "$ARTIFACTS/diff-current.md"
+  capture_diff
 
   if [[ ! -s "$ARTIFACTS/diff-current.md" ]]; then
     echo "  No diff found — branch has no changes. Stopping."
     break
   fi
 
-  # 4b-ii: Codex reviews spec alignment (runs in worktree so it reads implemented files)
+  # Codex reviews spec alignment (runs in worktree so it reads implemented files)
   codex_review "You are a spec compliance reviewer. Check whether the implementation satisfies every requirement in the spec.
 
 Read both artifacts fresh from disk:
@@ -428,13 +444,12 @@ Explicitly check:
 
   echo "  Spec review saved to $ARTIFACTS/spec-review-${ROUND}.md"
 
-  # Check for BLOCKERs or FIXes
   if ! grep -qiE "(BLOCKER|FIX)" "$ARTIFACTS/spec-review-${ROUND}.md"; then
     echo "  No BLOCKER or FIX items — exiting spec review loop early."
     break
   fi
 
-  # 4b-iii: Claude applies fixes
+  # Claude applies fixes then pushes
   claude_run "You are running inside the git worktree at: $WORKTREE
 All file reads and writes MUST use paths inside $WORKTREE only.
 
@@ -443,6 +458,8 @@ Apply only the BLOCKER and FIX items from the spec review. Minimal diffs only. N
 Read the spec review from disk: $ARTIFACTS/spec-review-${ROUND}.md
 Read the spec from disk: $ARTIFACTS/spec.md"
 
+  push_worktree "fix: spec review round $ROUND"
+
   if [[ "$ROUND" -eq 3 ]]; then
     if grep -qiE "BLOCKER" "$ARTIFACTS/spec-review-${ROUND}.md"; then
       die "Spec BLOCKERs still present after 3 rounds. Stopping — human review required."
@@ -450,27 +467,20 @@ Read the spec from disk: $ARTIFACTS/spec.md"
   fi
 done
 
-# ── Step 5 — Risk Review Loop (Claude reviews and fixes) ──────────────────────
-step 5 "Risk Review Loop (Claude Code)"
+# ── Step 7 — Risk Review Loop (Claude reviews, fixes, push each round) ─────────
+step 7 "Risk Review Loop (Claude Code)"
 
 for ROUND in 1 2 3; do
-  echo "[STEP:5] Risk review round ${ROUND}/3"
+  echo "[STEP:7] Risk review round ${ROUND}/3"
   log "  Risk review round $ROUND / 3"
 
-  # 5a: fresh diff (committed + uncommitted vs origin/main)
-  git -C "$WORKTREE" fetch origin
-  {
-    git -C "$WORKTREE" diff origin/main...HEAD   # committed changes on branch
-    git -C "$WORKTREE" diff HEAD                 # unstaged changes
-    git -C "$WORKTREE" diff --cached             # staged changes
-  } > "$ARTIFACTS/diff-current.md"
+  capture_diff
 
   if [[ ! -s "$ARTIFACTS/diff-current.md" ]]; then
     echo "  No diff found — branch has no changes. Stopping."
     break
   fi
 
-  # 5b: Claude reviews
   claude_run "You are a code risk reviewer. Review the diff against the spec.
 
 Read both artifacts fresh from disk:
@@ -494,19 +504,20 @@ Save your full review output to: $ARTIFACTS/risk-${ROUND}.md"
   [[ -s "$ARTIFACTS/risk-${ROUND}.md" ]] || die "risk-${ROUND}.md is empty — Claude risk review failed"
   echo "  Risk review saved to $ARTIFACTS/risk-${ROUND}.md"
 
-  # Check for BLOCKERs or FIXes
   if ! grep -qiE "(BLOCKER|FIX)" "$ARTIFACTS/risk-${ROUND}.md"; then
     echo "  No BLOCKER or FIX items — exiting review loop early."
     break
   fi
 
-  # 5c: Claude applies fixes
+  # Claude applies fixes then pushes
   claude_run "You are running inside the git worktree at: $WORKTREE
 All file reads and writes MUST use paths inside $WORKTREE only.
 
 Apply only the BLOCKER and FIX items from the risk review. Minimal diffs only. No refactors. Ignore NOTE items.
 
 Read the risk review from disk: $ARTIFACTS/risk-${ROUND}.md"
+
+  push_worktree "fix: risk review round $ROUND"
 
   if [[ "$ROUND" -eq 3 ]]; then
     if grep -qiE "BLOCKER" "$ARTIFACTS/risk-${ROUND}.md"; then
@@ -515,16 +526,13 @@ Read the risk review from disk: $ARTIFACTS/risk-${ROUND}.md"
   fi
 done
 
-# ── Step 6 — AI Comment Cleanup (Claude Code) ─────────────────────────────────
-step 6 "AI Comment Cleanup (Claude Code)"
+# ── Step 8 — AI Comment Cleanup then push ─────────────────────────────────────
+step 8 "AI Comment Cleanup (Claude Code)"
 claude_run "/clean-ai-comments"
+push_worktree "chore: remove AI comments"
 
-# ── Step 7 — Commit and Push (Claude Code) ────────────────────────────────────
-step 7 "Commit and Push (Claude Code)"
-claude_run "/commit-push"
-
-# ── Step 8 — Final Report (Claude Code via feature-summary skill) ──────────────
-step 8 "Final Report (Claude Code)"
+# ── Step 9 — Final Report ──────────────────────────────────────────────────────
+step 9 "Final Report (Claude Code)"
 
 claude_run "/feature-summary target=$BRANCH spec=$ARTIFACTS/spec.md db=skip" | tee "$ARTIFACTS/report.md"
 
@@ -543,8 +551,8 @@ echo ""
 echo "Report saved to $ARTIFACTS/report.md"
 echo ""
 
-# ── Step 9 — Worktree Cleanup ─────────────────────────────────────────────────
-step 9 "Worktree Cleanup"
+# ── Step 10 — Worktree Cleanup ────────────────────────────────────────────────
+step 10 "Worktree Cleanup"
 # Run directly — skip the interactive worktree-remove skill (it asks "Proceed?" and blocks headlessly)
 cd "$REPO"
 if [[ -d "$WORKTREE" ]]; then
