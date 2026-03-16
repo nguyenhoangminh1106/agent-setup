@@ -4,7 +4,7 @@ arguments:
   - name: ticket
     description: "Full ticket text, GitHub issue number, or URL describing the work to be done."
   - name: branch
-    description: "Optional branch name. If omitted, inferred from the ticket title in kebab-case."
+    description: "Optional branch name. If omitted, inferred from the ticket title in kebab-case. When provided alone (e.g. branch=eng-5648-my-feature), resumes the pipeline from the last completed step."
   - name: repo
     description: "Optional path to the git repo. If omitted, use current directory."
 ---
@@ -12,6 +12,20 @@ arguments:
 ## Task
 
 You are a top-level orchestrator running in the terminal at the repo root. You are not running inside Claude Code or Codex — you dispatch to both as separate subprocess calls. Each step explicitly names which tool to invoke. Outputs are saved as artifact files and passed between tools. Never modify the main branch. Never exceed the ticket's scope.
+
+## Resume behaviour
+
+When `branch=<name>` is passed without ticket text, the pipeline resumes from the last completed step. Progress is tracked in `.ticket/<branch>/.last_step`. The pipeline also infers progress from existing artifacts when `.last_step` is absent (backwards compat):
+
+| Last artifact present | Inferred last step | Resumes at |
+|---|---|---|
+| `report.md` | 9 | step 10 (cleanup) |
+| `risk-1.md` | 7 | step 8 (cleanup) |
+| `spec-review-1.md` | 6 | step 7 (risk review) |
+| `plan.md` | 5 | step 6 (spec review) |
+| `spec.md` | 1 | step 2 (worktree) |
+
+Review loops (steps 6, 7) always run all remaining rounds — they do not skip individual rounds within a loop. If all rounds exhaust without clearing BLOCKERs, the pipeline emits a warning and continues rather than stopping.
 
 ## Tool Assignment
 

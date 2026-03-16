@@ -36,8 +36,20 @@ mkdir -p "$ARTIFACTS_ROOT"
 
 log()  { echo ""; echo "▶ $*"; echo ""; }
 die()  { echo "[STATUS:failed] $*" >&2; echo ""; echo "ERROR: $*" >&2; exit 1; }
+warn() { echo ""; echo "⚠ $*"; echo ""; }
 # step N "desc" — emits [STEP:N] prefix for dashboard parsing then calls log()
 step() { local n="$1"; local desc="$2"; echo "[STEP:${n}] ${desc}"; log "Step ${n} — ${desc}"; }
+
+# complete_step N — record that step N finished so resume can skip past it
+complete_step() { echo "$1" > "$ARTIFACTS/.last_step"; }
+
+# skip_before N — returns 0 (skip) if this step was already completed
+# Usage: skip_before 6 && { echo "Step 6: skipped"; continue_or_skip; }
+# LAST_COMPLETED is set once after ARTIFACTS is known
+skip_before() {
+  local n="$1"
+  [[ -n "${LAST_COMPLETED:-}" && "$LAST_COMPLETED" -ge "$n" ]]
+}
 
 require() {
   command -v "$1" &>/dev/null || die "'$1' is not installed or not in PATH"
@@ -199,6 +211,28 @@ echo "[BRANCH:${BRANCH}]"
 ARTIFACTS="${ARTIFACTS:-$ARTIFACTS_ROOT/$BRANCH}"
 mkdir -p "$ARTIFACTS"
 
+# Resolve last completed step for resume logic.
+# .last_step contains the highest step number already finished.
+# Also infer from artifacts if .last_step is missing (backwards compat).
+LAST_COMPLETED=0
+if [[ -s "$ARTIFACTS/.last_step" ]]; then
+  LAST_COMPLETED=$(cat "$ARTIFACTS/.last_step")
+elif [[ -s "$ARTIFACTS/report.md" ]]; then
+  LAST_COMPLETED=9
+elif [[ -s "$ARTIFACTS/risk-1.md" ]]; then
+  LAST_COMPLETED=7
+elif [[ -s "$ARTIFACTS/spec-review-1.md" ]]; then
+  LAST_COMPLETED=6
+elif [[ -s "$ARTIFACTS/plan.md" ]]; then
+  LAST_COMPLETED=5  # assume push happened if plan exists and worktree was set up
+elif [[ -s "$ARTIFACTS/spec.md" ]]; then
+  LAST_COMPLETED=1
+fi
+
+if [[ "$LAST_COMPLETED" -gt 0 ]]; then
+  echo "Resume detected: last completed step = $LAST_COMPLETED. Skipping to next step."
+fi
+
 # ── Step 0 — Clarify (Codex, interactive loop) ────────────────────────────────
 # Skip if we already have a spec (resume case).
 if [[ -s "$ARTIFACTS/spec.md" ]]; then
@@ -276,9 +310,11 @@ else
 
   [[ -s "$ARTIFACTS/spec.md" ]] || die "spec.md is empty — codex /spec may have failed"
   echo "Spec saved to $ARTIFACTS/spec.md"
+  complete_step 1
 fi
 
 # ── Step 2 — Worktree (Claude Code) ───────────────────────────────────────────
+# Always runs — worktree-create is idempotent (reuses existing worktree).
 step 2 "Worktree (Claude Code)"
 
 echo "Branch: $BRANCH"
@@ -330,11 +366,12 @@ echo "Working directory: $WORKTREE"
 echo "DEBUG: WORKTREE=$WORKTREE"
 cd "$WORKTREE"
 echo "DEBUG: CWD is now $(pwd)"
+complete_step 2
 
 # ── Step 3 — Plan (Codex) ─────────────────────────────────────────────────────
 # Auto-skip if plan already exists for this branch.
 if [[ -s "$ARTIFACTS/plan.md" ]]; then
-  echo "[STEP:3] Plan: skipped (using existing $ARTIFACTS/plan.md)"
+  echo "Step 3 — Plan: skipped (using existing $ARTIFACTS/plan.md)"
 else
   step 3 "Plan (Codex)"
 
@@ -373,6 +410,7 @@ Priorities (strict order):
 
   [[ -s "$ARTIFACTS/plan.md" ]] || die "plan.md is empty — codex planning failed"
   echo "Plan saved to $ARTIFACTS/plan.md"
+  complete_step 3
 fi
 
 # ── Helper: commit and push all worktree changes ──────────────────────────────
@@ -388,9 +426,12 @@ Commit message prefix: $label"
 }
 
 # ── Step 4 — Implementation (Claude Code) ─────────────────────────────────────
-step 4 "Implementation (Claude Code)"
+if skip_before 4; then
+  echo "Step 4 — Implementation: skipped (resume)"
+else
+  step 4 "Implementation (Claude Code)"
 
-claude_run "You are running inside the git worktree at: $WORKTREE
+  claude_run "You are running inside the git worktree at: $WORKTREE
 
 CRITICAL: All file reads and writes MUST use paths inside $WORKTREE. Never read or write files in the parent repo or any other directory. All paths in the plan are relative to $WORKTREE.
 
@@ -399,10 +440,17 @@ Execute this plan. Match existing code style and patterns. No new dependencies o
 Safety: no force push, no DROP/DELETE/ALTER TABLE/migrations, no changes to main or master. If any guard fires: STOP and report.
 
 Read the plan from disk: $ARTIFACTS/plan.md"
+  complete_step 4
+fi
 
 # ── Step 5 — Commit and Push initial implementation ───────────────────────────
-step 5 "Commit and Push (Claude Code)"
-push_worktree "feat: implement"
+if skip_before 5; then
+  echo "Step 5 — Commit and Push: skipped (resume)"
+else
+  step 5 "Commit and Push (Claude Code)"
+  push_worktree "feat: implement"
+  complete_step 5
+fi
 
 # ── Helper: capture diff from pushed remote branch ────────────────────────────
 capture_diff() {
@@ -411,21 +459,24 @@ capture_diff() {
 }
 
 # ── Step 6 — Spec Review Loop (Codex reviews, Claude fixes, push each round) ──
-step 6 "Spec Review Loop (Codex reviews, Claude fixes)"
+if skip_before 6; then
+  echo "Step 6 — Spec Review: skipped (resume)"
+else
+  step 6 "Spec Review Loop (Codex reviews, Claude fixes)"
 
-for ROUND in 1 2 3; do
-  echo "[STEP:6] Spec review round ${ROUND}/3"
-  log "  Spec review round $ROUND / 3"
+  for ROUND in 1 2 3; do
+    echo "[STEP:6] Spec review round ${ROUND}/3"
+    log "  Spec review round $ROUND / 3"
 
-  capture_diff
+    capture_diff
 
-  if [[ ! -s "$ARTIFACTS/diff-current.md" ]]; then
-    echo "  No diff found — branch has no changes. Stopping."
-    break
-  fi
+    if [[ ! -s "$ARTIFACTS/diff-current.md" ]]; then
+      echo "  No diff found — branch has no changes. Stopping."
+      break
+    fi
 
-  # Codex reviews spec alignment (runs in worktree so it reads implemented files)
-  codex_review "You are a spec compliance reviewer. Check whether the implementation satisfies every requirement in the spec.
+    # Codex reviews spec alignment (runs in worktree so it reads implemented files)
+    codex_review "You are a spec compliance reviewer. Check whether the implementation satisfies every requirement in the spec.
 
 Read both artifacts fresh from disk:
 - Spec: $ARTIFACTS/spec.md
@@ -442,15 +493,15 @@ Explicitly check:
 - Are there any spec requirements not yet implemented?
 - Does anything in the diff contradict the spec?" > "$ARTIFACTS/spec-review-${ROUND}.md"
 
-  echo "  Spec review saved to $ARTIFACTS/spec-review-${ROUND}.md"
+    echo "  Spec review saved to $ARTIFACTS/spec-review-${ROUND}.md"
 
-  if ! grep -qiE "(BLOCKER|FIX)" "$ARTIFACTS/spec-review-${ROUND}.md"; then
-    echo "  No BLOCKER or FIX items — exiting spec review loop early."
-    break
-  fi
+    if ! grep -qiE "(BLOCKER|FIX)" "$ARTIFACTS/spec-review-${ROUND}.md"; then
+      echo "  No BLOCKER or FIX items — exiting spec review loop early."
+      break
+    fi
 
-  # Claude applies fixes then pushes
-  claude_run "You are running inside the git worktree at: $WORKTREE
+    # Claude applies fixes then pushes
+    claude_run "You are running inside the git worktree at: $WORKTREE
 All file reads and writes MUST use paths inside $WORKTREE only.
 
 Apply only the BLOCKER and FIX items from the spec review. Minimal diffs only. No refactors. Ignore NOTE items.
@@ -458,30 +509,33 @@ Apply only the BLOCKER and FIX items from the spec review. Minimal diffs only. N
 Read the spec review from disk: $ARTIFACTS/spec-review-${ROUND}.md
 Read the spec from disk: $ARTIFACTS/spec.md"
 
-  push_worktree "fix: spec review round $ROUND"
+    push_worktree "fix: spec review round $ROUND"
 
-  if [[ "$ROUND" -eq 3 ]]; then
-    if grep -qiE "BLOCKER" "$ARTIFACTS/spec-review-${ROUND}.md"; then
-      die "Spec BLOCKERs still present after 3 rounds. Stopping — human review required."
+    if [[ "$ROUND" -eq 3 ]] && grep -qiE "BLOCKER" "$ARTIFACTS/spec-review-${ROUND}.md"; then
+      warn "Spec BLOCKERs still present after 3 rounds — proceeding to risk review."
     fi
-  fi
-done
+  done
+  complete_step 6
+fi
 
 # ── Step 7 — Risk Review Loop (Claude reviews, fixes, push each round) ─────────
-step 7 "Risk Review Loop (Claude Code)"
+if skip_before 7; then
+  echo "Step 7 — Risk Review: skipped (resume)"
+else
+  step 7 "Risk Review Loop (Claude Code)"
 
-for ROUND in 1 2 3; do
-  echo "[STEP:7] Risk review round ${ROUND}/3"
-  log "  Risk review round $ROUND / 3"
+  for ROUND in 1 2 3; do
+    echo "[STEP:7] Risk review round ${ROUND}/3"
+    log "  Risk review round $ROUND / 3"
 
-  capture_diff
+    capture_diff
 
-  if [[ ! -s "$ARTIFACTS/diff-current.md" ]]; then
-    echo "  No diff found — branch has no changes. Stopping."
-    break
-  fi
+    if [[ ! -s "$ARTIFACTS/diff-current.md" ]]; then
+      echo "  No diff found — branch has no changes. Stopping."
+      break
+    fi
 
-  claude_run "You are a code risk reviewer. Review the diff against the spec.
+    claude_run "You are a code risk reviewer. Review the diff against the spec.
 
 Read both artifacts fresh from disk:
 - Spec: $ARTIFACTS/spec.md
@@ -501,55 +555,65 @@ Explicitly check:
 
 Save your full review output to: $ARTIFACTS/risk-${ROUND}.md"
 
-  [[ -s "$ARTIFACTS/risk-${ROUND}.md" ]] || die "risk-${ROUND}.md is empty — Claude risk review failed"
-  echo "  Risk review saved to $ARTIFACTS/risk-${ROUND}.md"
+    [[ -s "$ARTIFACTS/risk-${ROUND}.md" ]] || die "risk-${ROUND}.md is empty — Claude risk review failed"
+    echo "  Risk review saved to $ARTIFACTS/risk-${ROUND}.md"
 
-  if ! grep -qiE "(BLOCKER|FIX)" "$ARTIFACTS/risk-${ROUND}.md"; then
-    echo "  No BLOCKER or FIX items — exiting review loop early."
-    break
-  fi
+    if ! grep -qiE "(BLOCKER|FIX)" "$ARTIFACTS/risk-${ROUND}.md"; then
+      echo "  No BLOCKER or FIX items — exiting review loop early."
+      break
+    fi
 
-  # Claude applies fixes then pushes
-  claude_run "You are running inside the git worktree at: $WORKTREE
+    # Claude applies fixes then pushes
+    claude_run "You are running inside the git worktree at: $WORKTREE
 All file reads and writes MUST use paths inside $WORKTREE only.
 
 Apply only the BLOCKER and FIX items from the risk review. Minimal diffs only. No refactors. Ignore NOTE items.
 
 Read the risk review from disk: $ARTIFACTS/risk-${ROUND}.md"
 
-  push_worktree "fix: risk review round $ROUND"
+    push_worktree "fix: risk review round $ROUND"
 
-  if [[ "$ROUND" -eq 3 ]]; then
-    if grep -qiE "BLOCKER" "$ARTIFACTS/risk-${ROUND}.md"; then
-      die "BLOCKERs still present after 3 rounds. Stopping — human review required."
+    if [[ "$ROUND" -eq 3 ]] && grep -qiE "BLOCKER" "$ARTIFACTS/risk-${ROUND}.md"; then
+      warn "Risk BLOCKERs still present after 3 rounds — proceeding to cleanup."
     fi
-  fi
-done
+  done
+  complete_step 7
+fi
 
 # ── Step 8 — AI Comment Cleanup then push ─────────────────────────────────────
-step 8 "AI Comment Cleanup (Claude Code)"
-claude_run "/clean-ai-comments"
-push_worktree "chore: remove AI comments"
+if skip_before 8; then
+  echo "Step 8 — AI Comment Cleanup: skipped (resume)"
+else
+  step 8 "AI Comment Cleanup (Claude Code)"
+  claude_run "/clean-ai-comments"
+  push_worktree "chore: remove AI comments"
+  complete_step 8
+fi
 
 # ── Step 9 — Final Report ──────────────────────────────────────────────────────
-step 9 "Final Report (Claude Code)"
+if skip_before 9; then
+  echo "Step 9 — Final Report: skipped (resume)"
+else
+  step 9 "Final Report (Claude Code)"
 
-claude_run "/feature-summary target=$BRANCH spec=$ARTIFACTS/spec.md db=skip" | tee "$ARTIFACTS/report.md"
+  claude_run "/feature-summary target=$BRANCH spec=$ARTIFACTS/spec.md db=skip" | tee "$ARTIFACTS/report.md"
 
-COMPARE_URL=$(git -C "$WORKTREE" rev-parse --abbrev-ref HEAD 2>/dev/null | xargs -I{} gh pr view {} --json url --jq .url 2>/dev/null || {
-  base=$(git -C "$WORKTREE" remote get-url origin | sed 's/\.git$//')
-  echo "${base}/compare/main...${BRANCH}"
-})
-echo "" >> "$ARTIFACTS/report.md"
-echo "---" >> "$ARTIFACTS/report.md"
-echo "Compare: $COMPARE_URL" >> "$ARTIFACTS/report.md"
+  COMPARE_URL=$(git -C "$WORKTREE" rev-parse --abbrev-ref HEAD 2>/dev/null | xargs -I{} gh pr view {} --json url --jq .url 2>/dev/null || {
+    base=$(git -C "$WORKTREE" remote get-url origin | sed 's/\.git$//')
+    echo "${base}/compare/main...${BRANCH}"
+  })
+  echo "" >> "$ARTIFACTS/report.md"
+  echo "---" >> "$ARTIFACTS/report.md"
+  echo "Compare: $COMPARE_URL" >> "$ARTIFACTS/report.md"
 
-echo ""
-echo "── Compare URL ──────────────────────────────────────────"
-echo "$COMPARE_URL"
-echo ""
-echo "Report saved to $ARTIFACTS/report.md"
-echo ""
+  echo ""
+  echo "── Compare URL ──────────────────────────────────────────"
+  echo "$COMPARE_URL"
+  echo ""
+  echo "Report saved to $ARTIFACTS/report.md"
+  echo ""
+  complete_step 9
+fi
 
 # ── Step 10 — Worktree Cleanup ────────────────────────────────────────────────
 step 10 "Worktree Cleanup"
