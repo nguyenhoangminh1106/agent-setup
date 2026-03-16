@@ -53,12 +53,13 @@ require gh
 WORKTREE=""
 
 # claude_run: runs Claude Code headlessly in the worktree directory
+# IMPORTANT: runs in a subshell with CWD=$WORKTREE so Claude's relative path
+# resolution is anchored to the worktree. --add-dir is intentionally omitted
+# to prevent Claude from following absolute paths back to the main repo.
 claude_run() {
   if [[ -n "$WORKTREE" ]]; then
-    echo "DEBUG claude_run: running in WORKTREE=$WORKTREE"
-    (cd "$WORKTREE" && echo "DEBUG claude_run subshell CWD=$(pwd)" && claude --dangerously-skip-permissions --add-dir "$WORKTREE" -p "$1")
+    (cd "$WORKTREE" && claude --dangerously-skip-permissions -p "$1")
   else
-    echo "DEBUG claude_run: WORKTREE not set, running in CWD=$(pwd)"
     claude --dangerously-skip-permissions -p "$1"
   fi
 }
@@ -377,7 +378,11 @@ fi
 # ── Step 4 — Implementation (Claude Code) ─────────────────────────────────────
 step 4 "Implementation (Claude Code)"
 
-claude_run "Execute this plan inside the current worktree. Match existing code style and patterns. No new dependencies or abstractions unless the spec requires them. Do not touch files outside the plan.
+claude_run "You are running inside the git worktree at: $WORKTREE
+
+CRITICAL: All file reads and writes MUST use paths inside $WORKTREE. Never read or write files in the parent repo or any other directory. All paths in the plan are relative to $WORKTREE.
+
+Execute this plan. Match existing code style and patterns. No new dependencies or abstractions unless the spec requires them. Do not touch files outside the plan.
 
 Safety: no force push, no DROP/DELETE/ALTER TABLE/migrations, no changes to main or master. If any guard fires: STOP and report.
 
@@ -430,7 +435,10 @@ Explicitly check:
   fi
 
   # 4b-iii: Claude applies fixes
-  claude_run "Apply only the BLOCKER and FIX items from the spec review. Minimal diffs only. No refactors. Ignore NOTE items.
+  claude_run "You are running inside the git worktree at: $WORKTREE
+All file reads and writes MUST use paths inside $WORKTREE only.
+
+Apply only the BLOCKER and FIX items from the spec review. Minimal diffs only. No refactors. Ignore NOTE items.
 
 Read the spec review from disk: $ARTIFACTS/spec-review-${ROUND}.md
 Read the spec from disk: $ARTIFACTS/spec.md"
@@ -493,7 +501,10 @@ Save your full review output to: $ARTIFACTS/risk-${ROUND}.md"
   fi
 
   # 5c: Claude applies fixes
-  claude_run "Apply only the BLOCKER and FIX items from the risk review. Minimal diffs only. No refactors. Ignore NOTE items.
+  claude_run "You are running inside the git worktree at: $WORKTREE
+All file reads and writes MUST use paths inside $WORKTREE only.
+
+Apply only the BLOCKER and FIX items from the risk review. Minimal diffs only. No refactors. Ignore NOTE items.
 
 Read the risk review from disk: $ARTIFACTS/risk-${ROUND}.md"
 
