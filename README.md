@@ -154,18 +154,18 @@ Requirements: `codex` and `claude` CLIs both installed and in PATH.
 
 | # | Step | Tool | What happens |
 |---|---|---|---|
-| 0a | Branch name | **Codex** via `/name-branch` | Derives a clean branch name from the ticket before anything else |
+| 0a | Branch name | **Claude** via `/name-branch` | Derives a clean branch name from the ticket before anything else |
 | 0 | Clarify | **Codex** via `/clarify` | Reads codebase, asks only unanswerable questions. Interactive loop up to 3 rounds |
 | 1 | Spec | **Codex** via `/spec` | Reads ticket + codebase, produces a minimal requirement spec |
 | 2 | Worktree | **Claude** via `/worktree-create` | Creates an isolated branch + worktree. All changes happen here |
 | 3 | Plan | **Codex** | Reads spec, produces minimal-diff execution plan |
-| 4 | Implement | **Claude** | Executes plan. Matches existing patterns, no unnecessary abstractions |
-| 4b | Spec review | **Codex** reviews, **Claude** fixes (×3 max) | Verifies implementation matches spec. Applies BLOCKER + FIX items only |
-| 5 | Risk review | **Claude** reviews + fixes (×3 max) | Checks for regressions, scope drift, data risk |
-| 6 | Cleanup | **Claude** via `/clean-ai-comments` | Removes noisy AI comments from diff |
-| 7 | Commit | **Claude** via `/commit-push` | Conventional Commits message, no `--no-verify` |
-| 8 | Report | **Claude** via `/feature-summary` | Summary, business purpose, UI test steps, compare URL |
-| 9 | Worktree cleanup | bash | Removes local worktree. Branch preserved on remote |
+| 4 | Implement | **Claude** | Executes plan in worktree. Matches existing patterns, no unnecessary abstractions |
+| 5 | Push | **Claude** via `/commit-push` | Commits and pushes implementation before any reviews |
+| 6 | Spec review | **Codex** reviews, **Claude** fixes + pushes (×3 max) | Reads diff from pushed branch. Verifies spec alignment. Each fix round pushes before next review |
+| 7 | Risk review | **Claude** reviews + fixes + pushes (×3 max) | Reads diff from pushed branch. Checks regressions, scope drift, data risk. Each fix round pushes |
+| 8 | Cleanup | **Claude** via `/clean-ai-comments` + push | Removes noisy AI comments, then pushes |
+| 9 | Report | **Claude** via `/feature-summary` | Summary, business purpose, UI test steps, compare URL |
+| 10 | Worktree cleanup | bash | Removes local worktree. Branch preserved on remote |
 
 ### Artifacts
 
@@ -173,12 +173,12 @@ All intermediate outputs saved to `.ticket/<branch>/`:
 
 | File | Written by | Read by |
 |---|---|---|
-| `spec.md` | Step 1 | Steps 3, 4b, 5, 8 |
+| `spec.md` | Step 1 | Steps 3, 6, 7, 9 |
 | `plan.md` | Step 3 | Step 4 |
-| `diff-current.md` | Steps 4b, 5 (fresh each round) | Review steps |
-| `spec-review-N.md` | Step 4b | Step 4b fix |
-| `risk-N.md` | Step 5 | Step 5 fix |
-| `report.md` | Step 8 | Human |
+| `diff-current.md` | Steps 6, 7 (fresh each round from `origin/<branch>`) | Review steps |
+| `spec-review-N.md` | Step 6 | Step 6 fix |
+| `risk-N.md` | Step 7 | Step 7 fix |
+| `report.md` | Step 9 | Human |
 
 ### Safety guarantees
 
