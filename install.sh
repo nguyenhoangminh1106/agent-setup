@@ -10,7 +10,7 @@ trap cleanup EXIT
 # Install locations (user-level)
 mkdir -p \
   "$HOME/.claude/commands" \
-  "$HOME/.codex/prompts" \
+  "$HOME/.codex/skills" \
   "$HOME/.cursor/commands"
 
 # Skills: "name:subfolder/name.md"
@@ -49,10 +49,10 @@ for entry in "${SKILLS[@]}"; do
     exit 1
   fi
   rm -f "$HOME/.claude/commands/${name}.md"
-  rm -f "$HOME/.codex/prompts/${name}.md"
+  rm -f "$HOME/.codex/skills/${name}.md"
   rm -f "$HOME/.cursor/commands/${name}.md"
   cp "$TMP_DIR/${name}.md" "$HOME/.claude/commands/${name}.md"
-  cp "$TMP_DIR/${name}.md" "$HOME/.codex/prompts/${name}.md"
+  cp "$TMP_DIR/${name}.md" "$HOME/.codex/skills/${name}.md"
   cp "$TMP_DIR/${name}.md" "$HOME/.cursor/commands/${name}.md"
 done
 
