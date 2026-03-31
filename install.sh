@@ -19,6 +19,7 @@ mkdir -p \
 SKILLS=(
   "commit-push:git/commit-push.md"
   "name-branch:git/name-branch.md"
+  "name-commit:git/name-commit.md"
   "worktree-create:git/worktree-create.md"
   "worktree-remove:git/worktree-remove.md"
   "branch-risk-review:review/branch-risk-review.md"

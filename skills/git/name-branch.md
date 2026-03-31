@@ -7,7 +7,7 @@ arguments:
 
 ## Task
 
-Read the context and produce exactly one valid git branch name. Nothing else.
+Read the context and produce exactly one valid git branch name. Nothing else. No explanation, no reasoning, no markdown — just the name.
 
 ## Rules
 
@@ -55,4 +55,4 @@ Print exactly one line to stdout:
 BRANCH:<name>
 ```
 
-No other output. No trailing newline issues. Just that one line.
+No other output. No explanation, no reasoning, no markdown, no trailing newline. Just that one line.

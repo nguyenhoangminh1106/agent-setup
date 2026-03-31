@@ -42,7 +42,7 @@ git diff
 ```
 
 **5) Decide commit message**
-Use Conventional Commits format based on the diff.
+Use `/name-commit` (the name-commit skill) to generate the message from the diff. If unavailable, use Conventional Commits format based on the diff.
 
 **6) Stage all**
 ```
