@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working in this
 
 ## What this repo is
 
-A set of reusable skill files (`.md` prompts) that are installed into Claude Code (`~/.claude/commands/`), Codex (`~/.codex/prompts/`), and Cursor (`~/.cursor/commands/`). The install script fetches each skill from GitHub and copies it to all three tool directories.
+A set of reusable skill files (`.md` prompts) that are installed into Claude Code (`~/.claude/commands/`), Codex (`~/.codex/skills/<name>/SKILL.md`), and Cursor (`~/.cursor/commands/`). The install script fetches each skill from GitHub and installs it in the correct format for each tool.
 
 ## Installing / updating skills
 

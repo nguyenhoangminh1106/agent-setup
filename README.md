@@ -25,12 +25,12 @@ agent-setup/
 │   ├── ticket/       # clarify, spec, ticket
 │   ├── project/      # daily-update, feature-summary, testing-instructions
 │   └── data/         # db-unsync-fix, query-db
-├── install.sh        # installs all skills flat into ~/.claude/commands/, ~/.codex/prompts/, ~/.cursor/commands/
+├── install.sh        # installs skills into ~/.claude/commands/, ~/.codex/skills/<name>/SKILL.md, ~/.cursor/commands/
 ├── ticket.sh         # terminal CLI orchestrator for the full ticket pipeline
 └── README.md
 ```
 
-Skills are organised into subfolders in the repo for clarity, but installed **flat** so `/skill-name` references work identically in all tools.
+Skills are organised into subfolders in the repo for clarity. Claude Code and Cursor install them as flat `.md` files; Codex installs them as folder-based skills (`<name>/SKILL.md`) with converted frontmatter.
 
 ---
 
@@ -51,7 +51,7 @@ bash install.sh
 Installs skills to:
 
 - **Claude Code** → `~/.claude/commands/`
-- **OpenAI Codex** → `~/.codex/prompts/`
+- **OpenAI Codex** → `~/.codex/skills/<name>/SKILL.md`
 - **Cursor** → `~/.cursor/commands/`
 - **Terminal CLI** → `~/bin/ticket`
 

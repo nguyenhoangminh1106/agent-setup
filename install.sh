@@ -14,7 +14,8 @@ mkdir -p \
   "$HOME/.cursor/commands"
 
 # Skills: "name:subfolder/name.md"
-# Installed to ~/.claude/commands/<name>.md (flat) — subfolder is repo-only organisation.
+# Claude/Cursor: installed flat to ~/.claude/commands/<name>.md
+# Codex: installed as folders to ~/.codex/skills/<name>/SKILL.md
 SKILLS=(
   "commit-push:git/commit-push.md"
   "name-branch:git/name-branch.md"
@@ -48,12 +49,30 @@ for entry in "${SKILLS[@]}"; do
     echo "ERROR: failed to download skills/${path}" >&2
     exit 1
   fi
+
+  # Claude Code & Cursor: flat .md files
   rm -f "$HOME/.claude/commands/${name}.md"
-  rm -f "$HOME/.codex/skills/${name}.md"
   rm -f "$HOME/.cursor/commands/${name}.md"
+  # Clean up deprecated Codex prompts location
+  rm -f "$HOME/.codex/prompts/${name}.md"
   cp "$TMP_DIR/${name}.md" "$HOME/.claude/commands/${name}.md"
-  cp "$TMP_DIR/${name}.md" "$HOME/.codex/skills/${name}.md"
   cp "$TMP_DIR/${name}.md" "$HOME/.cursor/commands/${name}.md"
+
+  # Codex: folder-based skills — ~/.codex/skills/<name>/SKILL.md
+  # Extract description from existing frontmatter, rewrite as Codex format
+  codex_dir="$HOME/.codex/skills/${name}"
+  rm -rf "$codex_dir"
+  mkdir -p "$codex_dir"
+  desc=$(sed -n 's/^description: *"\(.*\)"/\1/p' "$TMP_DIR/${name}.md" | head -1)
+  # Strip the old frontmatter (everything between the two --- lines), keep the body
+  body=$(awk 'BEGIN{fm=0} /^---$/{fm++; next} fm>=2{print}' "$TMP_DIR/${name}.md")
+  cat > "$codex_dir/SKILL.md" <<SKILLEOF
+---
+name: ${name}
+description: "${desc}"
+---
+${body}
+SKILLEOF
 done
 
 # Install ticket.sh as a global CLI command
