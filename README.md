@@ -1,4 +1,4 @@
-# agent-setup
+# agent-github-setup
 
 A lightweight **agent skills registry** for Claude Code, OpenAI Codex, and Cursor.
 Every skill is plain Markdown, versioned in Git, and installed locally into each agent's command directory.
@@ -18,11 +18,11 @@ Every skill is plain Markdown, versioned in Git, and installed locally into each
 ## Repository Structure
 
 ```text
-agent-setup/
+agent-github-setup/
 ├── skills/
 │   ├── git/          # commit-push, name-branch, worktree-create, worktree-remove
 │   ├── review/       # branch-risk-review, clean-ai-comments, pr-description, pr-triage
-│   ├── ticket/       # clarify, spec, ticket
+│   ├── ticket/       # clarify, argue-to-clarify, spec, ticket
 │   ├── project/      # daily-update, feature-summary, testing-instructions
 │   └── data/         # db-unsync-fix, query-db
 ├── install.sh        # installs skills into ~/.claude/commands/, ~/.codex/skills/<name>/SKILL.md, ~/.cursor/commands/
@@ -37,14 +37,14 @@ Skills are organised into subfolders in the repo for clarity. Claude Code and Cu
 ## Installation
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/nguyenhoangminh1106/agent-setup/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/nguyenhoangminh1106/agent-github-setup/main/install.sh | bash
 ```
 
 Or clone and run locally:
 
 ```bash
-git clone https://github.com/nguyenhoangminh1106/agent-setup.git
-cd agent-setup
+git clone https://github.com/nguyenhoangminh1106/agent-github-setup.git
+cd agent-github-setup
 bash install.sh
 ```
 
@@ -101,6 +101,9 @@ Read-only PR triage. Auto-resolves bot threads (style/false-alarm/low-risk). Rep
 
 #### `clarify`
 Read a ticket and the codebase, then ask only questions that cannot be answered from existing code. Outputs `CLARIFY:DONE` if nothing is unclear, or `CLARIFY:QUESTIONS` with a minimal list. Used as Step 0 of the ticket pipeline.
+
+#### `argue-to-clarify`
+Challenge unclear requests through concise solution-design arguments. Reads relevant code context first, asks one yes/no decision at a time, and stops at clarification or planning until implementation is explicitly requested.
 
 #### `spec`
 Turn raw ticket input into a clean, codebase-aware requirement spec. Studies existing patterns before writing a single line. Outputs to stdout — the caller handles file saving.
@@ -195,7 +198,7 @@ All intermediate outputs saved to `.ticket/<branch>/`:
 
 1. Create `skills/<subfolder>/<name>.md` with YAML frontmatter and instructions.
 2. Add `"<name>:<subfolder>/<name>.md"` to the `SKILLS` array in `install.sh`.
-3. Update `CLAUDE.md` skills list and add a section to this README.
+3. Update `CLAUDE.md` and `AGENTS.md` skills lists and add a section to this README.
 4. Commit, push, re-run `install.sh` on other machines.
 
 ---

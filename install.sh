@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_RAW="https://raw.githubusercontent.com/nguyenhoangminh1106/agent-setup/main"
+REPO_RAW="https://raw.githubusercontent.com/nguyenhoangminh1106/agent-github-setup/main"
 TMP_DIR="$(mktemp -d)"
 
 cleanup() { rm -rf "$TMP_DIR"; }
@@ -28,6 +28,7 @@ SKILLS=(
   "pr-triage:review/pr-triage.md"
   "linear-fetch:ticket/linear-fetch.md"
   "clarify:ticket/clarify.md"
+  "argue-to-clarify:ticket/argue-to-clarify.md"
   "spec:ticket/spec.md"
   "fix-review:ticket/fix-review.md"
   "ticket:ticket/ticket.md"
@@ -64,7 +65,7 @@ for entry in "${SKILLS[@]}"; do
   codex_dir="$HOME/.codex/skills/${name}"
   rm -rf "$codex_dir"
   mkdir -p "$codex_dir"
-  desc=$(sed -n 's/^description: *"\(.*\)"/\1/p' "$TMP_DIR/${name}.md" | head -1)
+  desc=$(sed -n -E 's/^description:[[:space:]]*"?([^"]*)"?[[:space:]]*$/\1/p' "$TMP_DIR/${name}.md" | head -1)
   # Strip the old frontmatter (everything between the two --- lines), keep the body
   body=$(awk 'BEGIN{fm=0} /^---$/{fm++; next} fm>=2{print}' "$TMP_DIR/${name}.md")
   cat > "$codex_dir/SKILL.md" <<SKILLEOF
