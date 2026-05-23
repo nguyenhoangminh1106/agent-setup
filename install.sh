@@ -22,6 +22,7 @@ SKILLS=(
   "name-commit:git/name-commit.md"
   "worktree-create:git/worktree-create.md"
   "worktree-remove:git/worktree-remove.md"
+  "resolve-conflicts-safely:git/resolve-conflicts-safely.md"
   "branch-risk-review:review/branch-risk-review.md"
   "clean-ai-comments:review/clean-ai-comments.md"
   "pr-description:review/pr-description.md"

@@ -20,7 +20,7 @@ Every skill is plain Markdown, versioned in Git, and installed locally into each
 ```text
 agent-github-setup/
 ├── skills/
-│   ├── git/          # commit-push, name-branch, worktree-create, worktree-remove
+│   ├── git/          # commit-push, name-branch, worktree-create, worktree-remove, resolve-conflicts-safely
 │   ├── review/       # branch-risk-review, clean-ai-comments, pr-description, pr-triage
 │   ├── ticket/       # clarify, argue-to-clarify, spec, ticket
 │   ├── project/      # daily-update, feature-summary, testing-instructions
@@ -78,6 +78,9 @@ Create or reuse a git worktree. Always places worktrees at `ROOT/.claude/worktre
 
 #### `worktree-remove`
 Safely remove a git worktree by branch name or path. Detects uncommitted changes. Optionally deletes the branch after removal (ask-first). Never force-removes without approval.
+
+#### `resolve-conflicts-safely`
+Resolve Git merge/rebase conflicts with minimal, behavior-preserving edits. Restricts changes to conflicted files, preserves compatible intent from both sides, and stages only resolved files.
 
 ---
 

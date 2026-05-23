@@ -16,14 +16,14 @@ curl -fsSL https://raw.githubusercontent.com/nguyenhoangminh1106/agent-github-se
 ./install.sh
 ```
 
-The script installs these skills: `commit-push`, `name-branch`, `name-commit`, `worktree-create`, `worktree-remove`, `branch-risk-review`, `clean-ai-comments`, `pr-description`, `pr-triage`, `clarify`, `argue-to-clarify`, `spec`, `fix-review`, `ticket`, `daily-update`, `feature-summary`, `testing-instructions`, `db-unsync-fix`, `query-db`.
+The script installs these skills: `commit-push`, `name-branch`, `name-commit`, `worktree-create`, `worktree-remove`, `resolve-conflicts-safely`, `branch-risk-review`, `clean-ai-comments`, `pr-description`, `pr-triage`, `clarify`, `argue-to-clarify`, `spec`, `fix-review`, `ticket`, `daily-update`, `feature-summary`, `testing-instructions`, `db-unsync-fix`, `query-db`.
 
 After editing skills locally, push and re-run `./install.sh` on other machines.
 
 ## Architecture
 
 - `skills/` — Skills are organised into subfolders by category. Each file is a self-contained prompt with YAML frontmatter (`description`, `arguments`) followed by procedural instructions.
-  - `skills/git/` — `commit-push`, `name-branch`, `name-commit`, `worktree-create`, `worktree-remove`
+  - `skills/git/` — `commit-push`, `name-branch`, `name-commit`, `worktree-create`, `worktree-remove`, `resolve-conflicts-safely`
   - `skills/review/` — `branch-risk-review`, `clean-ai-comments`, `pr-description`, `pr-triage`
   - `skills/ticket/` — `clarify`, `argue-to-clarify`, `fix-review`, `linear-fetch`, `spec`, `ticket`
   - `skills/project/` — `daily-update`, `feature-summary`, `testing-instructions`
