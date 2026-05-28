@@ -17,6 +17,7 @@ mkdir -p \
 # Claude/Cursor: installed flat to ~/.claude/commands/<name>.md
 # Codex: installed as folders to ~/.codex/skills/<name>/SKILL.md
 SKILLS=(
+  "minimal-coding:coding/minimal-coding.md"
   "commit-push:git/commit-push.md"
   "name-branch:git/name-branch.md"
   "name-commit:git/name-commit.md"

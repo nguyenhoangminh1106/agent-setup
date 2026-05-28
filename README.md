@@ -20,6 +20,7 @@ Every skill is plain Markdown, versioned in Git, and installed locally into each
 ```text
 agent-github-setup/
 ├── skills/
+│   ├── coding/       # minimal-coding
 │   ├── git/          # commit-push, name-branch, worktree-create, worktree-remove, resolve-conflicts-safely
 │   ├── review/       # branch-risk-review, clean-ai-comments, pr-description, pr-triage
 │   ├── ticket/       # clarify, argue-to-clarify, spec, ticket
@@ -64,6 +65,13 @@ export PATH="$HOME/bin:$PATH"  # add to ~/.zshrc or ~/.bashrc
 ---
 
 ## Skills
+
+### Coding
+
+#### `minimal-coding`
+Minimal-diff coding guardrails for codebase-consistent implementation. Emphasizes reusing existing patterns, avoiding unnecessary abstractions, preserving type safety, and running checks that match touched files.
+
+---
 
 ### Git
 
