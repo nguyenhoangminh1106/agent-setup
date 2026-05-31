@@ -10,7 +10,7 @@ A set of reusable skill files (`.md` prompts) that are installed into Codex (`~/
 
 ```bash
 # Install all skills from GitHub (no clone needed)
-curl -fsSL https://raw.githubusercontent.com/nguyenhoangminh1106/agent-github-setup/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/nguyenhoangminh1106/agent-setup/main/install.sh | bash
 
 # Or, after cloning, run locally
 ./install.sh

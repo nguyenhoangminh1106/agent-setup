@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_RAW="https://raw.githubusercontent.com/nguyenhoangminh1106/agent-github-setup/main"
+REPO_RAW="https://raw.githubusercontent.com/nguyenhoangminh1106/agent-setup/main"
 TMP_DIR="$(mktemp -d)"
 
 cleanup() { rm -rf "$TMP_DIR"; }

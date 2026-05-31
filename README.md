@@ -1,4 +1,4 @@
-# agent-github-setup
+# agent-setup
 
 A lightweight **agent skills registry** for Claude Code, OpenAI Codex, and Cursor.
 Every skill is plain Markdown, versioned in Git, and installed locally into each agent's command directory.
@@ -18,7 +18,7 @@ Every skill is plain Markdown, versioned in Git, and installed locally into each
 ## Repository Structure
 
 ```text
-agent-github-setup/
+agent-setup/
 ├── skills/
 │   ├── coding/       # minimal-coding
 │   ├── git/          # commit-push, name-branch, worktree-create, worktree-remove, resolve-conflicts-safely
@@ -38,14 +38,14 @@ Skills are organised into subfolders in the repo for clarity. Claude Code and Cu
 ## Installation
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/nguyenhoangminh1106/agent-github-setup/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/nguyenhoangminh1106/agent-setup/main/install.sh | bash
 ```
 
 Or clone and run locally:
 
 ```bash
-git clone https://github.com/nguyenhoangminh1106/agent-github-setup.git
-cd agent-github-setup
+git clone https://github.com/nguyenhoangminh1106/agent-setup.git
+cd agent-setup
 bash install.sh
 ```
 
