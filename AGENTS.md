@@ -16,20 +16,20 @@ curl -fsSL https://raw.githubusercontent.com/nguyenhoangminh1106/agent-setup/mai
 ./install.sh
 ```
 
-The script installs these skills: `minimal-coding`, `commit-push`, `name-branch`, `name-commit`, `worktree-create`, `worktree-remove`, `resolve-conflicts-safely`, `branch-risk-review`, `clean-ai-comments`, `pr-description`, `pr-triage`, `clarify`, `argue-to-clarify`, `spec`, `fix-review`, `ticket`, `daily-update`, `feature-summary`, `testing-instructions`, `db-unsync-fix`, `query-db`.
+The script installs these skills: `minimal-coding`, `commit-push`, `name-branch`, `name-commit`, `worktree-create`, `worktree-remove`, `resolve-conflicts-safely`, `branch-risk-review`, `clean-ai-comments`, `pr-description`, `pr-triage`, `clarify`, `argue-to-clarify`, `spec`, `fix-review`, `ticket`, `codebase-study-pack`, `daily-update`, `feature-summary`, `testing-instructions`, `db-unsync-fix`, `query-db`.
 
 After editing skills locally, push and re-run `./install.sh` on other machines.
 
 ## Architecture
 
-- `skills/` — Skills are organised into subfolders by category. Each file is a self-contained prompt with YAML frontmatter (`description`, `arguments`) followed by procedural instructions.
+- `skills/` — Skills are organised into subfolders by category. Each skill file is a prompt with YAML frontmatter (`description`, `arguments`) followed by procedural instructions. Some Codex skills may also include folder-local references.
   - `skills/coding/` — `minimal-coding`
   - `skills/git/` — `commit-push`, `name-branch`, `name-commit`, `worktree-create`, `worktree-remove`, `resolve-conflicts-safely`
   - `skills/review/` — `branch-risk-review`, `clean-ai-comments`, `pr-description`, `pr-triage`
   - `skills/ticket/` — `clarify`, `argue-to-clarify`, `fix-review`, `linear-fetch`, `spec`, `ticket`
-  - `skills/project/` — `daily-update`, `feature-summary`, `testing-instructions`
+  - `skills/project/` — `codebase-study-pack`, `daily-update`, `feature-summary`, `testing-instructions`
   - `skills/data/` — `db-unsync-fix`, `query-db`
-- `install.sh` — Downloads each skill and installs it **flat** into `~/.Codex/commands/<name>.md` (and Codex/Cursor equivalents). Subfolders are repo organisation only — the installed names are unchanged so all `/skill-name` references keep working.
+- `install.sh` — Downloads each skill and installs it **flat** into `~/.Codex/commands/<name>.md` (and Codex/Cursor equivalents). Subfolders are repo organisation only — the installed names are unchanged so all `/skill-name` references keep working. Codex-only reference files are installed beside the relevant `SKILL.md` when needed.
 
 ## Adding a new skill
 

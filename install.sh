@@ -34,6 +34,7 @@ SKILLS=(
   "spec:ticket/spec.md"
   "fix-review:ticket/fix-review.md"
   "ticket:ticket/ticket.md"
+  "codebase-study-pack:project/codebase-study-pack.md"
   "daily-update:project/daily-update.md"
   "feature-summary:project/feature-summary.md"
   "testing-instructions:project/testing-instructions.md"
@@ -77,6 +78,13 @@ description: "${desc}"
 ---
 ${body}
 SKILLEOF
+
+  # Some Codex skills include folder-local references used by SKILL.md.
+  if [[ "$name" == "codebase-study-pack" ]]; then
+    mkdir -p "$codex_dir/references"
+    curl -fsSL "$REPO_RAW/skills/project/codebase-study-pack/references/study-pack-structure.md" \
+      -o "$codex_dir/references/study-pack-structure.md"
+  fi
 done
 
 # Install ticket.sh as a global CLI command

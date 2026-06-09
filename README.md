@@ -24,14 +24,14 @@ agent-setup/
 │   ├── git/          # commit-push, name-branch, worktree-create, worktree-remove, resolve-conflicts-safely
 │   ├── review/       # branch-risk-review, clean-ai-comments, pr-description, pr-triage
 │   ├── ticket/       # clarify, argue-to-clarify, spec, ticket
-│   ├── project/      # daily-update, feature-summary, testing-instructions
+│   ├── project/      # codebase-study-pack, daily-update, feature-summary, testing-instructions
 │   └── data/         # db-unsync-fix, query-db
 ├── install.sh        # installs skills into ~/.claude/commands/, ~/.codex/skills/<name>/SKILL.md, ~/.cursor/commands/
 ├── ticket.sh         # terminal CLI orchestrator for the full ticket pipeline
 └── README.md
 ```
 
-Skills are organised into subfolders in the repo for clarity. Claude Code and Cursor install them as flat `.md` files; Codex installs them as folder-based skills (`<name>/SKILL.md`) with converted frontmatter.
+Skills are organised into subfolders in the repo for clarity. Claude Code and Cursor install them as flat `.md` files; Codex installs them as folder-based skills (`<name>/SKILL.md`) with converted frontmatter. Codex-only reference files are installed beside the relevant `SKILL.md` when a skill needs them.
 
 ---
 
@@ -127,6 +127,9 @@ See [Ticket Pipeline](#ticket-pipeline) below for full details.
 ---
 
 ### Project
+
+#### `codebase-study-pack`
+Create deep, navigable technical study packs for a codebase with infrastructure and feature docs, exact file/function citations, and principal-engineer-level implementation detail.
 
 #### `daily-update`
 Generate a daily work update from Slack (Beeper), Linear, GitHub, and Claude Code session logs. Matches past entry style, shows draft for approval, then appends to the updates file.
