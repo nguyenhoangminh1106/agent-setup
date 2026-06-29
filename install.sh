@@ -44,6 +44,12 @@ SKILLS=(
 
 SKILL_NAMES=()
 
+# Folder-local files that should be installed beside Codex SKILL.md.
+# Format: "skill-name:path-under-skills"
+CODEX_REFERENCES=(
+  "codebase-study-pack:project/codebase-study-pack/references/study-pack-structure.md"
+)
+
 # Download then install each skill
 for entry in "${SKILLS[@]}"; do
   name="${entry%%:*}"
@@ -80,11 +86,21 @@ ${body}
 SKILLEOF
 
   # Some Codex skills include folder-local references used by SKILL.md.
-  if [[ "$name" == "codebase-study-pack" ]]; then
+  for reference_entry in "${CODEX_REFERENCES[@]}"; do
+    reference_skill="${reference_entry%%:*}"
+    reference_path="${reference_entry##*:}"
+    if [[ "$reference_skill" != "$name" ]]; then
+      continue
+    fi
+
     mkdir -p "$codex_dir/references"
-    curl -fsSL "$REPO_RAW/skills/project/codebase-study-pack/references/study-pack-structure.md" \
-      -o "$codex_dir/references/study-pack-structure.md"
-  fi
+    reference_name="${reference_path##*/}"
+    curl -fsSL "$REPO_RAW/skills/${reference_path}" -o "$codex_dir/references/${reference_name}"
+    if [[ ! -s "$codex_dir/references/${reference_name}" ]]; then
+      echo "ERROR: failed to download skills/${reference_path}" >&2
+      exit 1
+    fi
+  done
 done
 
 # Install ticket.sh as a global CLI command

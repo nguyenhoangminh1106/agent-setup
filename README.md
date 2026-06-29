@@ -31,7 +31,7 @@ agent-setup/
 └── README.md
 ```
 
-Skills are organised into subfolders in the repo for clarity. Claude Code and Cursor install them as flat `.md` files; Codex installs them as folder-based skills (`<name>/SKILL.md`) with converted frontmatter. Codex-only reference files are installed beside the relevant `SKILL.md` when a skill needs them.
+Skills are organised into subfolders in the repo for clarity. Claude Code and Cursor install them as flat `.md` files; Codex installs them as folder-based skills (`<name>/SKILL.md`) with converted frontmatter. Codex-only reference folders such as `skills/project/codebase-study-pack/references/` are installed beside the relevant `SKILL.md` when a skill needs them.
 
 ---
 
@@ -129,7 +129,7 @@ See [Ticket Pipeline](#ticket-pipeline) below for full details.
 ### Project
 
 #### `codebase-study-pack`
-Create deep, navigable technical study packs for a codebase with infrastructure and feature docs, exact file/function citations, and principal-engineer-level implementation detail.
+Create or refresh deep, navigable technical study packs for a codebase with infrastructure and feature docs, exact file/function citations, and principal-engineer-level implementation detail. If a pack folder already exists, it reuses that folder, scans the codebase from scratch, and adds or updates coverage for newly discovered systems.
 
 #### `daily-update`
 Generate a daily work update from Slack (Beeper), Linear, GitHub, and Claude Code session logs. Matches past entry style, shows draft for approval, then appends to the updates file.

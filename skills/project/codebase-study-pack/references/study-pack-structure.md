@@ -10,6 +10,7 @@ Include:
 - folder layout;
 - best reading path that mixes feature and infrastructure files;
 - distinction between `infrastructure/` and `features/`;
+- when updating an existing pack, what changed in this refresh;
 - total file/line count after verification.
 
 ## Infrastructure Files
@@ -78,6 +79,20 @@ Each feature file should include:
 - important invariants;
 - code snippets with line ranges;
 - lessons an experienced engineer can reuse.
+
+## Updating Existing Packs
+
+If the output folder already exists:
+
+1. Inventory the current artifact before editing:
+   - `find <folder> -maxdepth 3 -type f | sort`;
+   - skim every existing `README.md`, `00_*.md`, and ranked map;
+   - note stale citations, duplicated topics, and obvious gaps.
+2. Re-scan the target repository from scratch. Do not assume the existing pack is complete or current.
+3. Preserve filenames that still describe the code accurately. Rename or split only when the old shape hides important new boundaries.
+4. Add new files for substantial newly discovered infrastructure or feature systems instead of cramming unrelated material into old files.
+5. Update the top-level README, reading order, ranked feature map, inspected-files list, and verification counts in the same pass as the new/deeper content.
+6. If a prior section cannot be verified in current code, mark it stale or remove it rather than carrying uncited claims forward.
 
 ## Depth Heuristics
 

@@ -10,19 +10,27 @@ Produce rigorous codebase study packs for experienced engineers. Optimize for co
 
 1. Confirm the target repository from `cwd` unless the user names another repo.
 2. Infer the output location from the request. If unspecified, write under `~/Downloads/<repo>_codebase_study_pack`; if filesystem permissions block this, stage in `/private/tmp` and request approval to copy.
+   - If the requested or default output folder already exists, reuse it as the working study pack.
+   - Do not delete or restart the existing folder unless the user explicitly asks.
+   - Read the existing pack first, then refresh it from a fresh codebase scan.
+   - Preserve useful existing structure and add new files or sections for newly discovered systems, changed paths, or deeper evidence.
 3. Build a code map before writing:
    - list top-level directories with `find` or `rg --files`;
    - inspect architecture docs such as `AGENTS.md`, `CLAUDE.md`, `README.md`, `docs/`;
    - use `rg` to find routers/controllers, services, repositories, stores, workers, queues, state machines, caches, providers, and feature domains.
-4. Read exact file slices with line numbers using `nl -ba <file> | sed -n '<start>,<end>p'`.
-5. Choose both infrastructure-wise and feature-wise topics unless the user asks for only one.
-6. Write one parent folder with subfolders, never separate top-level packs:
+4. When updating an existing pack, build both maps:
+   - existing artifact map: `find <folder> -maxdepth 3 -type f | sort`;
+   - fresh code map: current repository files, docs, and domain searches.
+5. Compare the existing pack against the fresh code map. Add coverage for important new subsystems and update stale citations, paths, reading order, file counts, and feature rankings.
+6. Read exact file slices with line numbers using `nl -ba <file> | sed -n '<start>,<end>p'`.
+7. Choose both infrastructure-wise and feature-wise topics unless the user asks for only one.
+8. Write one parent folder with subfolders, never separate top-level packs:
    - `README.md`
    - `infrastructure/`
    - `features/`
-7. Cite every substantive claim with exact file path, function/type name, and line range.
-8. Include short code snippets only where they prove a claim or make a pattern easier to study.
-9. Verify final structure with `find <folder> -maxdepth 2 -type f | sort` and `wc -l`.
+9. Cite every substantive claim with exact file path, function/type name, and line range.
+10. Include short code snippets only where they prove a claim or make a pattern easier to study.
+11. Verify final structure with `find <folder> -maxdepth 3 -type f | sort` and `wc -l`.
 
 ## Output Standard
 
@@ -41,6 +49,7 @@ Prefer many medium-depth files over one huge document. Use stable filenames with
 ## Folder Shape
 
 Read `references/study-pack-structure.md` when creating the artifact, selecting topics, or deciding how deep each file should go.
+When an existing study pack is present, also use that reference to decide whether to keep, split, rename, or extend existing files.
 
 The default shape:
 

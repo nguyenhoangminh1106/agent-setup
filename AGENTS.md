@@ -4,7 +4,7 @@ This file provides guidance to Codex (Codex.ai/code) when working in this reposi
 
 ## What this repo is
 
-A set of reusable skill files (`.md` prompts) that are installed into Codex (`~/.Codex/commands/`), Codex (`~/.codex/skills/<name>/SKILL.md`), and Cursor (`~/.cursor/commands/`). The install script fetches each skill from GitHub and installs it in the correct format for each tool.
+A set of reusable skill files (`.md` prompts) that are installed into Claude Code (`~/.claude/commands/`), Codex (`~/.codex/skills/<name>/SKILL.md`), and Cursor (`~/.cursor/commands/`). The install script fetches each skill from GitHub and installs it in the correct format for each tool.
 
 ## Installing / updating skills
 
@@ -29,7 +29,7 @@ After editing skills locally, push and re-run `./install.sh` on other machines.
   - `skills/ticket/` — `clarify`, `argue-to-clarify`, `fix-review`, `linear-fetch`, `spec`, `ticket`
   - `skills/project/` — `codebase-study-pack`, `daily-update`, `feature-summary`, `testing-instructions`
   - `skills/data/` — `db-unsync-fix`, `query-db`
-- `install.sh` — Downloads each skill and installs it **flat** into `~/.Codex/commands/<name>.md` (and Codex/Cursor equivalents). Subfolders are repo organisation only — the installed names are unchanged so all `/skill-name` references keep working. Codex-only reference files are installed beside the relevant `SKILL.md` when needed.
+- `install.sh` — Downloads each skill and installs it flat into `~/.claude/commands/<name>.md` and `~/.cursor/commands/<name>.md`, and as Codex folder skills in `~/.codex/skills/<name>/SKILL.md`. Subfolders are repo organisation only — the installed names are unchanged so all `/skill-name` references keep working. Codex-only reference files are installed beside the relevant `SKILL.md` when needed.
 
 ## Adding a new skill
 
