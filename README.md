@@ -1,6 +1,6 @@
 # agent-setup
 
-A shared registry of **21 reusable skills** for Claude Code, Codex, and Cursor, with their supporting references, examples, licenses, and agent metadata.
+A shared registry of **20 reusable skills** for Claude Code, Codex, and Cursor, with their supporting references, examples, licenses, and agent metadata.
 
 Each skill lives once in this checkout. Setup creates links so the apps read the same files, without copying or converting them.
 
@@ -39,9 +39,6 @@ agent-setup/
 │   │   └── SKILL.md
 │   ├── query-db/
 │   │   └── SKILL.md
-│   ├── remotion-best-practices/
-│   │   ├── SKILL.md
-│   │   └── rules/                       # Remotion guides and examples
 │   ├── resolve-conflicts-safely/
 │   │   └── SKILL.md
 │   ├── review-rebuild/
@@ -67,7 +64,7 @@ agent-setup/
 └── README.md
 ```
 
-All 21 skill folders are listed above. Each contains `SKILL.md`; supporting files remain inside that skill’s `agents/`, `references/`, or `rules/` folders. Skill folders are siblings so links such as `../current-work/SKILL.md` work in the repository and through installed paths.
+All 20 skill folders are listed above. Each contains `SKILL.md`; supporting files remain inside that skill’s `agents/`, `references/`, or `rules/` folders. Skill folders are siblings so links such as `../current-work/SKILL.md` work in the repository and through installed paths.
 
 `AGENTS.md` holds the shared repository instructions. `CLAUDE.md` contains only `@AGENTS.md`, importing those same instructions for Claude Code. Update shared rules in `AGENTS.md` once.
 
@@ -96,7 +93,6 @@ The categories below group skills by purpose without adding another directory le
 | UI and testing | [ui-polish](skills/ui-polish/SKILL.md) | Repair and polish the UI of scoped frontend work. |
 | UI and testing | [testing-instructions](skills/testing-instructions/SKILL.md) | Produce concrete UI testing steps and example data. |
 | UI and testing | [ui-test](skills/ui-test/SKILL.md) | Test an already-running app and report screenshot evidence. |
-| Video | [remotion-best-practices](skills/remotion-best-practices/SKILL.md) | Build and render videos with Remotion. **Remotion-specific.** |
 | Skill tooling | [find-skills](skills/find-skills/SKILL.md) | Discover skills for additional capabilities. |
 
 ## Setup
@@ -125,7 +121,7 @@ The piped installer requires Git and keeps its checkout at `~/.local/share/agent
 
 Codex and Claude support symlinked skill folders, and Cursor discovers the shared `~/.agents/skills/` directory. See the official [Codex](https://learn.chatgpt.com/docs/build-skills), [Claude Code](https://code.claude.com/docs/en/skills), and [Cursor](https://cursor.com/docs/skills) documentation.
 
-Keep the checkout in place. If you move it, rerun setup to repair the links. Restart existing agent sessions if newly linked skills do not appear. App installations, credentials, MCP connections, and specialized dependencies such as Prisma or Remotion are configured separately.
+Keep the checkout in place. If you move it, rerun setup to repair the links. Restart existing agent sessions if newly linked skills do not appear. App installations, credentials, MCP connections, and specialized dependencies such as Prisma are configured separately.
 
 ## Updates and migration
 

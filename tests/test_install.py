@@ -39,7 +39,7 @@ class InstallTest(unittest.TestCase):
 
     def test_shared_links_references_and_live_edits(self):
         self.install()
-        self.assertEqual(len(self.skills), 21)
+        self.assertEqual(len(self.skills), 20)
         for skill in self.skills:
             for app in (".agents", ".claude"):
                 link = self.home / app / "skills" / skill.parent.name

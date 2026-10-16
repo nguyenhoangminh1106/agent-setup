@@ -4,7 +4,7 @@ Shared repository instructions for coding agents. Claude Code imports this file 
 
 ## What this repo is
 
-A shared registry of 21 reusable skills for Claude Code, Codex, and Cursor. Skill folders are fresh copies of the selected current local skills, including supporting resources and metadata. `skills/<name>/SKILL.md` is the canonical entrypoint. Keep skills as sibling folders so their relative links remain valid.
+A shared registry of 20 reusable skills for Claude Code, Codex, and Cursor. Skill folders are fresh copies of the selected current local skills, including supporting resources and metadata. `skills/<name>/SKILL.md` is the canonical entrypoint. Keep skills as sibling folders so their relative links remain valid.
 
 ## Installing / updating
 
@@ -28,7 +28,6 @@ Local edits are immediately shared. Push and pull to update other machines; reru
 - Documentation: `codebase-study-pack`, `feature-summary`, `summarize-changes`, `pr-description`.
 - Data: `db-unsync-fix` (Prisma-specific), `query-db`, `seed-data`.
 - UI and testing: `frontend-design`, `ui-polish`, `testing-instructions`, `ui-test`.
-- Video: `remotion-best-practices` (Remotion-specific).
 - Skill tooling: `find-skills`.
 
 ## Architecture
