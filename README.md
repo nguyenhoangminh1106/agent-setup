@@ -1,222 +1,114 @@
 # agent-setup
 
-A lightweight **agent skills registry** for Claude Code, OpenAI Codex, and Cursor.
-Every skill is plain Markdown, versioned in Git, and installed locally into each agent's command directory.
+A shared registry of **21 reusable skills** for Claude Code, Codex, and Cursor. Skills are fresh snapshots of the selected local skill folders, including references, examples, licenses, and agent metadata.
 
----
+Each skill lives once in this checkout. Setup creates links so the apps read the same files, without copying or converting them.
 
-## Philosophy
-
-- **Skills, not magic** – every action is explicit, reviewable, and reversible
-- **Ask before change** – destructive or state-changing commands must be approved
-- **One source of truth** – this repo is the canonical definition of all skills
-- **Tool-agnostic** – the same skill works in Claude, Codex, and Cursor
-- **Repo-local first** – workflows (e.g. worktrees) live inside the project root
-
----
-
-## Repository Structure
+## Structure
 
 ```text
 agent-setup/
 ├── skills/
-│   ├── coding/       # minimal-coding
-│   ├── git/          # commit-push, name-branch, worktree-create, worktree-remove, resolve-conflicts-safely
-│   ├── review/       # branch-risk-review, clean-ai-comments, pr-description, pr-triage
-│   ├── ticket/       # clarify, argue-to-clarify, spec, ticket
-│   ├── project/      # codebase-study-pack, daily-update, feature-summary, testing-instructions
-│   └── data/         # db-unsync-fix, query-db
-├── install.sh        # installs skills into ~/.claude/commands/, ~/.codex/skills/<name>/SKILL.md, ~/.cursor/commands/
-├── ticket.sh         # terminal CLI orchestrator for the full ticket pipeline
+│   ├── argue-to-clarify/SKILL.md
+│   ├── current-work/
+│   │   ├── SKILL.md
+│   │   ├── agents/openai.yaml
+│   │   └── references/git-evidence.md
+│   ├── frontend-design/
+│   │   ├── SKILL.md
+│   │   └── LICENSE.txt
+│   ├── remotion-best-practices/
+│   │   ├── SKILL.md
+│   │   └── rules/
+│   └── …                       # 21 sibling skill folders
+├── install.sh
+├── tests/test_install.py
+├── AGENTS.md
+├── CLAUDE.md
 └── README.md
 ```
 
-Skills are organised into subfolders in the repo for clarity. Claude Code and Cursor install them as flat `.md` files; Codex installs them as folder-based skills (`<name>/SKILL.md`) with converted frontmatter. Codex-only reference folders such as `skills/project/codebase-study-pack/references/` are installed beside the relevant `SKILL.md` when a skill needs them.
+Skill folders are siblings so links such as `../current-work/SKILL.md` work both in this repository and through installed paths. Categories below are for navigation; there is no duplicated category tree or manual installation manifest.
 
----
+## Skills
 
-## Installation
+| Category | Skill | Purpose |
+|---|---|---|
+| Planning and scope | [argue-to-clarify](skills/argue-to-clarify/SKILL.md) | Resolve unclear requirements through code-informed design decisions. |
+| Planning and scope | [current-work](skills/current-work/SKILL.md) | Establish the feature, fix, changes, and Git baseline in scope. |
+| Coding and review | [minimal-coding](skills/minimal-coding/SKILL.md) | Keep changes small and consistent with the codebase. |
+| Coding and review | [review-rebuild](skills/review-rebuild/SKILL.md) | Review, repair, and verify the complete scoped change. |
+| Coding and review | [clean-ai-comments](skills/clean-ai-comments/SKILL.md) | Remove noisy comments added in the scoped diff. |
+| Git | [name-branch](skills/name-branch/SKILL.md) | Generate a branch name from context or current work. |
+| Git | [name-commit](skills/name-commit/SKILL.md) | Generate a conventional commit message. |
+| Git | [resolve-conflicts-safely](skills/resolve-conflicts-safely/SKILL.md) | Resolve conflicts while preserving both sides' intended behavior. |
+| Documentation | [codebase-study-pack](skills/codebase-study-pack/SKILL.md) | Create deep, navigable technical study packs. |
+| Documentation | [feature-summary](skills/feature-summary/SKILL.md) | Explain scoped changes, business purpose, and UI testing. |
+| Documentation | [summarize-changes](skills/summarize-changes/SKILL.md) | Write a short, plain-English summary of scoped changes. |
+| Documentation | [pr-description](skills/pr-description/SKILL.md) | Combine a change summary with existing screenshots in a PR draft. |
+| Data | [db-unsync-fix](skills/db-unsync-fix/SKILL.md) | Generate manual SQL for branch-related Prisma schema drift. **Prisma-specific.** |
+| Data | [query-db](skills/query-db/SKILL.md) | Answer questions using read-only database queries. |
+| Data | [seed-data](skills/seed-data/SKILL.md) | Prepare, verify, and clean up scoped synthetic test records. |
+| UI and testing | [frontend-design](skills/frontend-design/SKILL.md) | Design distinctive interfaces grounded in the product brief. |
+| UI and testing | [ui-polish](skills/ui-polish/SKILL.md) | Repair and polish the UI of scoped frontend work. |
+| UI and testing | [testing-instructions](skills/testing-instructions/SKILL.md) | Produce concrete UI testing steps and example data. |
+| UI and testing | [ui-test](skills/ui-test/SKILL.md) | Test an already-running app and report screenshot evidence. |
+| Video | [remotion-best-practices](skills/remotion-best-practices/SKILL.md) | Build and render videos with Remotion. **Remotion-specific.** |
+| Skill tooling | [find-skills](skills/find-skills/SKILL.md) | Discover skills for additional capabilities. |
+
+## Setup
+
+Clone and install from your chosen permanent location:
+
+```bash
+git clone https://github.com/nguyenhoangminh1106/agent-setup.git
+cd agent-setup
+./install.sh
+```
+
+Or bootstrap without cloning manually:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/nguyenhoangminh1106/agent-setup/main/install.sh | bash
 ```
 
-Or clone and run locally:
+The piped installer requires Git and keeps its checkout at `~/.local/share/agent-setup`. It updates an existing managed checkout with `git pull --ff-only`. Running the installer from a local clone uses that clone, including uncommitted edits, without downloads.
 
-```bash
-git clone https://github.com/nguyenhoangminh1106/agent-setup.git
-cd agent-setup
-bash install.sh
-```
-
-Installs skills to:
-
-- **Claude Code** → `~/.claude/commands/`
-- **OpenAI Codex** → `~/.codex/skills/<name>/SKILL.md`
-- **Cursor** → `~/.cursor/commands/`
-- **Terminal CLI** → `~/bin/ticket`
-
-Make sure `~/bin` is in your PATH:
-
-```bash
-export PATH="$HOME/bin:$PATH"  # add to ~/.zshrc or ~/.bashrc
-```
-
----
-
-## Skills
-
-### Coding
-
-#### `minimal-coding`
-Minimal-diff coding guardrails for codebase-consistent implementation. Emphasizes reusing existing patterns, avoiding unnecessary abstractions, preserving type safety, and running checks that match touched files.
-
----
-
-### Git
-
-#### `commit-push`
-Stage, commit (Conventional Commits format), and push in one step. Never force-pushes. Handles pre-commit hook failures minimally.
-
-#### `name-branch`
-Generate a well-formatted git branch name (`feat/`, `fix/`, `chore/` + kebab-case, ≤50 chars) from any ticket or plain-English description. Used internally by `worktree-create` and the ticket pipeline.
-
-#### `worktree-create`
-Create or reuse a git worktree. Always places worktrees at `ROOT/.claude/worktrees/<branch>`. Infers branch name via `/name-branch` if not provided. Asks for confirmation once (skippable with `yes=true`).
-
-#### `worktree-remove`
-Safely remove a git worktree by branch name or path. Detects uncommitted changes. Optionally deletes the branch after removal (ask-first). Never force-removes without approval.
-
-#### `resolve-conflicts-safely`
-Resolve Git merge/rebase conflicts with minimal, behavior-preserving edits. Restricts changes to conflicted files, preserves compatible intent from both sides, and stages only resolved files.
-
----
-
-### Review
-
-#### `branch-risk-review`
-Read-only risk review of a branch or PR diff. Classifies findings as BLOCKER / FIX / NOTE. Checks behavioral safety, consistency with existing code, diff size, and simplicity. Does not edit code.
-
-#### `clean-ai-comments`
-Remove noisy, redundant AI-generated comments from the current branch diff only. Never touches pre-existing code. Keeps meaningful comments (WHY, gotchas, links).
-
-#### `pr-description`
-Write a plain-English PR description for non-technical readers. Covers all main changes in 1–3 sentences, no jargon.
-
-#### `pr-triage`
-Read-only PR triage. Auto-resolves bot threads (style/false-alarm/low-risk). Reports human threads without replying.
-
----
-
-### Ticket
-
-#### `clarify`
-Read a ticket and the codebase, then ask only questions that cannot be answered from existing code. Outputs `CLARIFY:DONE` if nothing is unclear, or `CLARIFY:QUESTIONS` with a minimal list. Used as Step 0 of the ticket pipeline.
-
-#### `argue-to-clarify`
-Challenge unclear requests through concise solution-design arguments. Reads relevant code context first, asks one yes/no decision at a time, and stops at clarification or planning until implementation is explicitly requested.
-
-#### `spec`
-Turn raw ticket input into a clean, codebase-aware requirement spec. Studies existing patterns before writing a single line. Outputs to stdout — the caller handles file saving.
-
-#### `ticket`
-The top-level multi-agent pipeline. Takes a ticket and runs end-to-end — from branch naming and clarification through to a committed, pushed, review-ready branch.
-
-See [Ticket Pipeline](#ticket-pipeline) below for full details.
-
----
-
-### Project
-
-#### `codebase-study-pack`
-Create or refresh deep, navigable technical study packs for a codebase with infrastructure and feature docs, exact file/function citations, and principal-engineer-level implementation detail. If a pack folder already exists, it reuses that folder, scans the codebase from scratch, and adds or updates coverage for newly discovered systems.
-
-#### `daily-update`
-Generate a daily work update from Slack (Beeper), Linear, GitHub, and Claude Code session logs. Matches past entry style, shows draft for approval, then appends to the updates file.
-
-#### `feature-summary`
-Summarize all changes on a branch (committed + uncommitted), explain the business purpose, and produce step-by-step UI testing instructions.
-
-#### `testing-instructions`
-Given a branch diff and optional DB access, produce concrete step-by-step UI testing instructions with real example data.
-
----
-
-### Data
-
-#### `query-db`
-Accept a plain-English question, figure out the right read-only query, run it, and return a clear answer. Never mutates data.
-
-#### `db-unsync-fix`
-When Prisma detects schema drift from migrations run on another branch, generate the manual SQL to revert those changes so you can run migrations cleanly on the current branch.
-
----
-
-## Ticket Pipeline
-
-The `ticket` command is a terminal orchestrator. It dispatches `codex` and `claude` as separate subprocess calls, using each for what it does best.
-
-### Usage
-
-```bash
-ticket "Add a logout button that clears session and redirects to /login"
-ticket 142                         # GitHub issue number
-ticket https://github.com/org/repo/issues/142
-ticket branch=fix/my-branch        # resume an existing branch
-```
-
-Requirements: `codex` and `claude` CLIs both installed and in PATH.
-
-### Pipeline steps
-
-| # | Step | Tool | What happens |
-|---|---|---|---|
-| 0a | Branch name | **Claude** via `/name-branch` | Derives a clean branch name from the ticket before anything else |
-| 0 | Clarify | **Codex** via `/clarify` | Reads codebase, asks only unanswerable questions. Interactive loop up to 3 rounds |
-| 1 | Spec | **Codex** via `/spec` | Reads ticket + codebase, produces a minimal requirement spec |
-| 2 | Worktree | **Claude** via `/worktree-create` | Creates an isolated branch + worktree. All changes happen here |
-| 3 | Plan | **Codex** | Reads spec, produces minimal-diff execution plan |
-| 4 | Implement | **Claude** | Executes plan in worktree. Matches existing patterns, no unnecessary abstractions |
-| 5 | Push | **Claude** via `/commit-push` | Commits and pushes implementation before any reviews |
-| 6 | Spec review | **Codex** reviews, **Claude** fixes + pushes (×3 max) | Reads diff from pushed branch. Verifies spec alignment. Each fix round pushes before next review |
-| 7 | Risk review | **Claude** reviews + fixes + pushes (×3 max) | Reads diff from pushed branch. Checks regressions, scope drift, data risk. Each fix round pushes |
-| 8 | Cleanup | **Claude** via `/clean-ai-comments` + push | Removes noisy AI comments, then pushes |
-| 9 | Report | **Claude** via `/feature-summary` | Summary, business purpose, UI test steps, compare URL |
-| 10 | Worktree cleanup | bash | Removes local worktree. Branch preserved on remote |
-
-### Artifacts
-
-All intermediate outputs saved to `.ticket/<branch>/`:
-
-| File | Written by | Read by |
+| Apps | Discovery location | Target |
 |---|---|---|
-| `spec.md` | Step 1 | Steps 3, 6, 7, 9 |
-| `plan.md` | Step 3 | Step 4 |
-| `diff-current.md` | Steps 6, 7 (fresh each round from `origin/<branch>`) | Review steps |
-| `spec-review-N.md` | Step 6 | Step 6 fix |
-| `risk-N.md` | Step 7 | Step 7 fix |
-| `report.md` | Step 9 | Human |
+| Codex and Cursor | `~/.agents/skills/<name>` | `<checkout>/skills/<name>` |
+| Claude Code | `~/.claude/skills/<name>` | Same folder |
 
-### Safety guarantees
+Codex and Claude support symlinked skill folders, and Cursor discovers the shared `~/.agents/skills/` directory. See the official [Codex](https://learn.chatgpt.com/docs/build-skills), [Claude Code](https://code.claude.com/docs/en/skills), and [Cursor](https://cursor.com/docs/skills) documentation.
 
-- No destructive git commands (`--force`, `reset --hard`, `clean -f`, `branch -D`)
-- No force pushes — ever
-- No database migrations generated or executed
-- No changes to `main` or `master`
-- Scope drift is a BLOCKER in every review round
-- Silent failures are not allowed — every error stops the pipeline immediately
+Keep the checkout in place. If you move it, rerun setup to repair the links. Restart existing agent sessions if newly linked skills do not appear. App installations, credentials, MCP connections, and specialized dependencies such as Prisma or Remotion are configured separately.
 
----
+## Updates and migration
 
-## Adding a New Skill
+- Edit a skill in this checkout once; all apps read the same files.
+- To refresh from local skills again, copy the complete selected folders from `~/.agents/skills/`, resolving source symlinks and preserving their supporting files. If those local folders already link to this checkout, they are the same files.
+- Push changes and pull them into the source checkout on other machines. Rerun setup after adding or removing skills or moving the checkout.
+- Setup retires this registry's legacy command/prompt copies for the selected skills. Identical copies and obsolete links are removed; differing files are preserved in the printed `~/.local/state/agent-setup/backups/migration.*` directory.
+- Dangling skill links into this checkout are removed during setup. Other local skills, plugins, and their files are left alone.
 
-1. Create `skills/<subfolder>/<name>.md` with YAML frontmatter and instructions.
-2. Add `"<name>:<subfolder>/<name>.md"` to the `SKILLS` array in `install.sh`.
-3. Update `CLAUDE.md` and `AGENTS.md` skills lists and add a section to this README.
-4. Commit, push, re-run `install.sh` on other machines.
+The previous ticket pipeline, ticket CLI installer, and Linear API-key setup have been removed. This repository contains only the selected reusable skills and their setup tooling.
 
----
+## Adding a skill
 
-## License
+1. Create `skills/<name>/SKILL.md` with YAML `name` and `description`, followed by instructions.
+2. Keep supporting references, scripts, assets, licenses, and metadata inside that folder. Preserve sibling links when importing skills.
+3. Update the skill lists in this README and `AGENTS.md`. `CLAUDE.md` imports `AGENTS.md`, so shared instructions are maintained once.
+4. Run `./install.sh`. Skill folders are discovered automatically.
 
-MIT — use it, fork it, adapt it.
+## Validation
+
+Run isolated installer tests without touching your real home directory:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
+bash -n install.sh
+```
+
+## Licenses
+
+Preserve the license terms included with imported skills. In particular, `frontend-design` includes its Apache 2.0 terms in [LICENSE.txt](skills/frontend-design/LICENSE.txt).

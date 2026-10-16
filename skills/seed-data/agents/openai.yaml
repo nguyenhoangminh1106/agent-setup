@@ -1,0 +1,4 @@
+interface:
+  display_name: "Seed Test Data"
+  short_description: "Create and clean up scoped synthetic test fixtures"
+  default_prompt: "Use $seed-data to prepare the missing test records for this scenario and provide verification and cleanup."
