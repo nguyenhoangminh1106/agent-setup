@@ -46,6 +46,18 @@ The old ticket skills, ticket pipeline, and CLI/API-key setup are no longer part
 3. Update the skill inventory in `README.md` and `AGENTS.md`. Keep `CLAUDE.md` as an import of `AGENTS.md`. The installer needs no manifest entry.
 4. Run isolated validation, then use `./install.sh` when local installation is requested. Push and pull to distribute changes.
 
+When the user asks to fix or update an existing skill, update both the canonical
+repository folder and its installed local copy unless they explicitly request
+repository-only changes. Resolve the installed path first: a symlink into this
+checkout already shares edits; a separate directory needs the same scoped
+changes applied, preserving unrelated local differences. Check the user-provided
+skill path and any existing Codex/Cursor or Claude Code installation paths for
+that skill; do not create additional installations or run the full installer
+just to synchronize an edit. Validate the changed skill and verify that the
+intended changes are present at the installed paths before reporting completion.
+If permissions prevent updating a local copy, request the required access and
+report any copy that remains unsynchronized.
+
 ## Validation
 
 ```bash

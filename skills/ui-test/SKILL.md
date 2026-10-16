@@ -1,6 +1,6 @@
 ---
 name: ui-test
-description: Test scoped changes in an already-running local web or native mobile app using designated test accounts. Follow a testing-instructions walkthrough, verify relevant notification and email flows when tools are available, and report results with screenshots. Not a server setup or code-fixing workflow.
+description: Check readiness, then test scoped changes in an already-running local web or native mobile app using designated test accounts. Follow a testing-instructions walkthrough, verify relevant notification and email flows when tools are available, and report results with screenshots. Not a server setup or code-fixing workflow.
 ---
 
 # UI Test
@@ -87,6 +87,42 @@ running UI uses that database.
   backend is unavailable, record the exact blocker and ask the user to restore
   their stack. Do not start a fallback server or substitute another deployment.
 
+## Readiness before testing
+
+Before feature test actions, check the prerequisites for the reconciled
+walkthrough. Start with read-only inspection; complete authorized login and
+targeted data setup under the next section, then confirm readiness before
+executing the affected steps. Check every dependency those steps require,
+without expanding into an audit of unrelated services.
+
+- Confirm the intended local URL/port or native target from project evidence.
+  Open the existing app and verify that it renders beyond a loading screen,
+  compile error, or error overlay. Check the final URL and redirects. A listening
+  port or successful HTTP response alone does not establish readiness.
+- Verify that the running app serves the scoped checkout/build where evidence
+  is available, and that its API/backend and datastore match the intended test
+  environment. Do not infer this from the shell's branch or a supplied DB URL.
+  Disclose any build/environment identity that cannot be established.
+- Identify required APIs, workers/queues, databases, and integrations from the
+  walkthrough and project configuration. Use available health/status endpoints,
+  existing logs, browser network/console evidence, or scoped read-only queries
+  to check their readiness. Inspect only relevant configuration and redact
+  secrets. Do not send a test event or mutate records merely to probe health.
+- Verify access to the designated test account/tenant, required records and
+  starting states, tools and screenshot capture, and any scoped mailbox,
+  notification, or device prerequisites described below. Confirm the permitted
+  external actions before their triggers.
+
+Summarize the evidence as Ready, Blocked, or Not applicable for each required
+prerequisite before execution. An unchecked prerequisite is not Ready. Record
+exact blockers and the affected walkthrough steps; ask for only the missing
+input or stack restoration needed. Run independent steps only after their own
+prerequisites are Ready. Keep readiness separate from feature results: a
+pre-existing setup blocker is Blocked, while a ready path that violates its
+expected behavior is Failed. Recheck affected prerequisites if the environment
+changes or a service becomes unavailable. These checks do not authorize service
+startup, repairs, or configuration changes.
+
 ## Setup and authorization
 
 Use only designated test accounts, test tenants/records, mailboxes, recipients,
@@ -157,7 +193,7 @@ when required; passing one does not establish the others.
 
 ## Execute and verify
 
-Follow the numbered walkthrough in order, with setup completed upfront and one
+Follow the numbered walkthrough in order, with readiness confirmed and setup completed upfront and one
 user session where possible. Use exact records and URLs from the plan and DB;
 do not silently substitute different data or claim a blocked step passed.
 
@@ -230,6 +266,7 @@ include device/simulator, OS, app build/version where available, and backend.
 Identify tested channels and unavailable capabilities, scoped working-tree
 changes, and any walkthrough steps omitted as out of scope.
 Show the DB host/database without credentials when DB checks were used.
+Include the readiness findings and any prerequisites that prevented execution.
 
 Use a compact results table:
 
