@@ -1,6 +1,6 @@
 # agent-setup
 
-A shared registry of **21 reusable skills** for Claude Code, Codex, and Cursor. Skills are fresh snapshots of the selected local skill folders, including references, examples, licenses, and agent metadata.
+A shared registry of **21 reusable skills** for Claude Code, Codex, and Cursor, with their supporting references, examples, licenses, and agent metadata.
 
 Each skill lives once in this checkout. Setup creates links so the apps read the same files, without copying or converting them.
 
@@ -9,26 +9,69 @@ Each skill lives once in this checkout. Setup creates links so the apps read the
 ```text
 agent-setup/
 ├── skills/
-│   ├── argue-to-clarify/SKILL.md
+│   ├── argue-to-clarify/
+│   │   └── SKILL.md
+│   ├── clean-ai-comments/
+│   │   └── SKILL.md
+│   ├── codebase-study-pack/
+│   │   ├── SKILL.md
+│   │   └── references/
 │   ├── current-work/
 │   │   ├── SKILL.md
-│   │   ├── agents/openai.yaml
-│   │   └── references/git-evidence.md
+│   │   ├── agents/
+│   │   └── references/
+│   ├── db-unsync-fix/
+│   │   └── SKILL.md
+│   ├── feature-summary/
+│   │   └── SKILL.md
+│   ├── find-skills/
+│   │   └── SKILL.md
 │   ├── frontend-design/
 │   │   ├── SKILL.md
 │   │   └── LICENSE.txt
+│   ├── minimal-coding/
+│   │   └── SKILL.md
+│   ├── name-branch/
+│   │   └── SKILL.md
+│   ├── name-commit/
+│   │   └── SKILL.md
+│   ├── pr-description/
+│   │   └── SKILL.md
+│   ├── query-db/
+│   │   └── SKILL.md
 │   ├── remotion-best-practices/
 │   │   ├── SKILL.md
-│   │   └── rules/
-│   └── …                       # 21 sibling skill folders
+│   │   └── rules/                       # Remotion guides and examples
+│   ├── resolve-conflicts-safely/
+│   │   └── SKILL.md
+│   ├── review-rebuild/
+│   │   ├── SKILL.md
+│   │   └── agents/
+│   ├── seed-data/
+│   │   ├── SKILL.md
+│   │   └── agents/
+│   ├── summarize-changes/
+│   │   └── SKILL.md
+│   ├── testing-instructions/
+│   │   └── SKILL.md
+│   ├── ui-polish/
+│   │   └── SKILL.md
+│   └── ui-test/
+│       ├── SKILL.md
+│       └── agents/
+├── tests/
+│   └── test_install.py
 ├── install.sh
-├── tests/test_install.py
-├── AGENTS.md
-├── CLAUDE.md
+├── AGENTS.md                      # Shared repository instructions
+├── CLAUDE.md                      # Imports AGENTS.md
 └── README.md
 ```
 
-Skill folders are siblings so links such as `../current-work/SKILL.md` work both in this repository and through installed paths. Categories below are for navigation; there is no duplicated category tree or manual installation manifest.
+All 21 skill folders are listed above. Each contains `SKILL.md`; supporting files remain inside that skill’s `agents/`, `references/`, or `rules/` folders. Skill folders are siblings so links such as `../current-work/SKILL.md` work in the repository and through installed paths.
+
+`AGENTS.md` holds the shared repository instructions. `CLAUDE.md` contains only `@AGENTS.md`, importing those same instructions for Claude Code. Update shared rules in `AGENTS.md` once.
+
+The categories below group skills by purpose without adding another directory level.
 
 ## Skills
 
@@ -76,7 +119,8 @@ The piped installer requires Git and keeps its checkout at `~/.local/share/agent
 
 | Apps | Discovery location | Target |
 |---|---|---|
-| Codex and Cursor | `~/.agents/skills/<name>` | `<checkout>/skills/<name>` |
+| Codex | `~/.agents/skills/<name>` | `<checkout>/skills/<name>` |
+| Cursor | `~/.agents/skills/<name>` | Same folder |
 | Claude Code | `~/.claude/skills/<name>` | Same folder |
 
 Codex and Claude support symlinked skill folders, and Cursor discovers the shared `~/.agents/skills/` directory. See the official [Codex](https://learn.chatgpt.com/docs/build-skills), [Claude Code](https://code.claude.com/docs/en/skills), and [Cursor](https://cursor.com/docs/skills) documentation.
