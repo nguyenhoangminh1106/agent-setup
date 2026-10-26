@@ -1,6 +1,6 @@
 ---
 name: ui-test
-description: Check readiness, then test scoped changes in an already-running local web or native mobile app using designated test accounts. Follow a testing-instructions walkthrough, verify relevant notification and email flows when tools are available, and report results with screenshots. Not a server setup or code-fixing workflow.
+description: Test scoped changes in an already-running app, preferring its existing browser tab and verified test session. Check readiness and use designated test accounts. Follow a testing-instructions walkthrough, verify relevant notification and email flows when tools are available, and report results with screenshots. Not a server setup or code-fixing workflow.
 ---
 
 # UI Test
@@ -32,6 +32,14 @@ interfaces and respect each tool's access restrictions. A connector that reads
 mail cannot by itself capture the mailbox UI; browser control cannot by itself
 operate a native app. Do not install tooling to fill gaps.
 
+For web testing, inspect the available browser tabs first using the browser
+tool's documented discovery API. Prefer the user's referenced or already-open
+app tab and its running server. Reuse its session when the designated test
+identity is verified; carry forward the user's prior confirmation while that
+session and environment remain unchanged. Inspect the current tab before
+opening another tab or invoking a login flow. Ask only if multiple plausible
+targets remain ambiguous or the test identity cannot be established.
+
 Collect missing inputs together: existing app URL or mobile target, designated
 test account/tenant, test mailboxes and recipients, permitted external actions,
 and optional DB access. Reuse known inputs and authenticated test sessions;
@@ -61,8 +69,12 @@ or change Git state merely to generate the plan; use local refs and disclose
 any freshness limitation. If the required skill cannot be found, report the
 missing dependency rather than inventing its instructions.
 
-For web testing, use the existing app URL from the walkthrough, session,
-running browser tab, or repository development documentation. If it remains ambiguous, ask for it.
+Use an explicit target supplied by the user. Otherwise, prefer the relevant
+open app tab over default URLs or ports in repository documentation. If no
+suitable tab exists, open the already-running URL supplied in the conversation
+or walkthrough; use development documentation only to help identify that
+existing server. Documentation is not an instruction to launch it. If no
+running target can be established, ask the user to open or provide it.
 If database access is needed and no URL was supplied, ask for the URL or whether
 to proceed without DB verification. A supplied DB URL is not evidence that the
 running UI uses that database.
@@ -81,11 +93,66 @@ running UI uses that database.
   automatically launches a server. Targeted test-data setup belongs to
   [seed-data](../seed-data/SKILL.md) under the setup rules below; it must not
   start services or change their configuration.
-- Opening a browser or a tab for the existing app is allowed. Use the available
-  browser UI tooling and its documented APIs to test that app directly.
+- Reuse the relevant open browser tab when available. Open another tab only
+  when needed for the walkthrough or when no suitable tab exists. Opening a
+  browser or tab does not authorize starting the application server. Test the
+  running app through the browser tool's documented APIs.
 - If the app is unreachable, redirects to the wrong environment, or a required
   backend is unavailable, record the exact blocker and ask the user to restore
   their stack. Do not start a fallback server or substitute another deployment.
+
+## Before and after code comparison
+
+For a bug fix, attempt to reproduce and capture the reported failure on the
+original code before testing the fix. Treat this comparison as required evidence,
+not an optional follow-up. If fixed-code testing already happened, return to the
+baseline and complete the comparison. A prepared form before clicking Send is
+not a screenshot of the bug. A visible behaviour change should likewise capture
+the original and changed states.
+
+Use the same affected record where possible. For immutable outputs such as sent
+emails, create matched baseline and fixed samples with the same account,
+recipients, content, and relevant settings; use distinct markers to identify
+versions. Plan both versions' external actions upfront within the user's
+permission, including any actual quantity limit. Local changes already being
+loaded or needing another matched sample is not itself a blocker.
+
+This controlled version switch is allowed only for evidence capture; it does
+not authorize implementation, repairs, or service lifecycle changes.
+
+- Resolve the original version from current-work; HEAD is suitable only when
+  the scoped change is entirely uncommitted. Never remove unrelated work just
+  to obtain a baseline, or revert whole files containing mixed changes.
+- Before switching, record HEAD, branch, index and working-tree state, and the
+  exact paths/hunks being set aside. Save a recoverable snapshot outside the
+  application source, including affected untracked files and staged/unstaged
+  distinctions. Record its location and restoration procedure so an interrupted
+  run can recover. A narrowly scoped stash or saved patch/file snapshot is
+  acceptable; never use a blanket stash, hard reset, clean, or discard operation.
+- Temporarily remove only the scoped changes when they can be isolated safely.
+  Keep the same test account, records, filters, viewport and framing. Prepare
+  fixtures that both versions can read before capturing either version; do not
+  run migrations or reset data to make the baseline work.
+- Let the existing development watcher reload the relevant frontend/backend,
+  then reload the browser and verify which version it serves before capturing
+  `before-fix`. A file change or browser refresh alone does not prove that a
+  backend process loaded the baseline. If switching requires restarting a
+  service, rebuilding a native app, or changing configuration, restore the
+  working state and report that specific blocker under Existing server only.
+- Restore the saved changes even if baseline testing fails, then verify exact
+  restoration of the index, working files and affected untracked files before
+  testing the fixed version. Do not overwrite concurrent edits or drop the
+  recovery snapshot on a restoration conflict; stop and report the recovery
+  location and remaining work. Recheck readiness and loaded version, then capture
+  `after-fix` using the same records and framing.
+- Report both versions, the observed difference and restoration verification.
+  If the original bug does not reproduce, preserve that evidence and state it;
+  do not modify the fixture afterward to manufacture a comparison. A reload
+  stability pair may be useful separately, but cannot replace a before/after
+  fix pair. When a concrete constraint blocks comparison, record the attempted
+  preparation, exact blocker, and next action; do not label the bug fully verified
+  from fixed-code results alone. Retain recovery material until restoration is
+  verified.
 
 ## Readiness before testing
 
@@ -220,8 +287,10 @@ compound or obscure the failure. Continue independent steps when safe. Retry
 only when evidence identifies a transient problem; do not repeatedly click a
 mutation or force success by editing data or code. Do not patch application
 code, browser DOM/CSS, runtime state, or network responses to make a check pass,
-or delegate repairs to another skill or agent. Report proposed fixes as
-recommendations; implementing them requires a separate user instruction.
+or delegate repairs to another skill or agent. The controlled version switch
+above is solely for baseline capture and must restore the existing changes.
+Report proposed fixes as recommendations; implementing them requires a
+separate user instruction.
 
 Judge visual expectations from the actual rendered UI and saved screenshots.
 A visible mismatch with the expected layout, content, or state is Failed even
@@ -248,8 +317,9 @@ and after the fix** (different code versions) from **before and after an action
 or timed event** (one version). A successful transition on fixed code does not
 prove that the old version was reproduced. Label historical/user-supplied
 screenshots as context, separate from controlled test evidence. If a requested
-baseline cannot be run under the existing-stack constraints, mark that check
-Blocked; do not substitute an unrelated screenshot or change services to obtain it.
+baseline cannot be run after assessing the controlled version switch above,
+mark that check Blocked and name the concrete constraint. Do not substitute
+reload screenshots for a fix comparison or change services to obtain one.
 
 Before reporting, visually inspect the actual saved files selected for the
 response. Check that the relevant item, count, message, or control is readable,
