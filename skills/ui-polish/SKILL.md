@@ -13,10 +13,14 @@ user explicitly asks for findings only, planning only, or no edits.
 
 ## 1. Load design guidance first
 
-Read the available `frontend-design:frontend-design` skill instructions before
-touching any file. It sets the bar for visual quality. If the repository has its
-own frontend conventions skill or doc (for example a `frontend-conventions`
-skill, `AGENTS.md`, `CLAUDE.md`, or a design-system README), read that too.
+Use `frontend-design:frontend-design` as the design guidance for this workflow.
+Read its available skill entrypoint, or the shared
+[frontend-design](../frontend-design/SKILL.md) copy, before editing frontend
+files. Apply its plan, review against the brief, build, and critique process;
+do not treat reading it as the entire integration. If neither entrypoint is
+available, report the missing dependency before proceeding with UI edits.
+Read the repository's own frontend conventions too (for example a
+`frontend-conventions` skill, `AGENTS.md`, `CLAUDE.md`, or a design-system README).
 
 One tension to resolve: `frontend-design` encourages distinctive aesthetics, but
 this is an existing product. Here, quality means fitting the established design
@@ -64,6 +68,12 @@ Consistency is measured against the app, so look at it first:
 - Two or three mature, polished screens near the one in scope. Note how they
   space sections, size headings, align labels, pad containers, and handle empty
   and loading states. These are the reference.
+
+Use that context as the brief for the frontend-design plan: identify the
+screen's audience and job, reuse the existing color and type tokens, and state
+the intended layout, hierarchy, and alignment. Keep the plan proportional to
+the repair. Review it against the product's conventions before implementing,
+then use the browser checks in section 6 to critique and refine the result.
 
 ## 4. Audit, then fix
 
